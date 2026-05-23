@@ -41,7 +41,13 @@
               Open project
             </button>
             <button
-              @click.stop="$emit('delete', project.id)"
+              @click.stop="$emit('edit', project); menuOpen = false"
+              class="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+            >
+              Edit project
+            </button>
+            <button
+              @click.stop="$emit('delete', project.id); menuOpen = false"
               class="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50"
             >
               Delete project
@@ -79,7 +85,7 @@ import { useProjectsStore } from '@/stores/projects'
 import type { Project } from '@/types'
 
 const props = defineProps<{ project: Project }>()
-defineEmits<{ delete: [id: string] }>()
+defineEmits<{ delete: [id: string]; edit: [project: Project] }>()
 
 const projectsStore = useProjectsStore()
 const menuOpen = ref(false)

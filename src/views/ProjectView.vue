@@ -43,6 +43,12 @@
             </button>
           </div>
 
+          <button @click="showEditProject = true" class="btn-secondary gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+            </svg>
+            Edit
+          </button>
           <button @click="showCreateTask = true" class="btn-primary gap-2">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
@@ -183,6 +189,14 @@
       </div>
     </div>
 
+    <!-- Edit project modal -->
+    <EditProjectModal
+      v-if="showEditProject && project"
+      :project="project"
+      @close="showEditProject = false"
+      @updated="showEditProject = false"
+    />
+
     <!-- Create task modal -->
     <CreateTaskModal
       v-if="showCreateTask && project"
@@ -204,6 +218,7 @@ import { useAuthStore } from '@/stores/auth'
 import TaskCard from '@/components/tasks/TaskCard.vue'
 import TaskRow from '@/components/tasks/TaskRow.vue'
 import CreateTaskModal from '@/components/tasks/CreateTaskModal.vue'
+import EditProjectModal from '@/components/projects/EditProjectModal.vue'
 import type { TaskStatus } from '@/types'
 
 const props = defineProps<{ id: string }>()
@@ -215,6 +230,7 @@ const authStore = useAuthStore()
 
 const viewMode = ref<'board' | 'list'>('board')
 const showCreateTask = ref(false)
+const showEditProject = ref(false)
 const createTaskDefaultStatus = ref<TaskStatus>('todo')
 const collapsedSections = ref<Set<string>>(new Set())
 

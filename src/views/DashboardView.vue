@@ -101,6 +101,7 @@
           :key="project.id"
           :project="project"
           @delete="handleDeleteProject"
+          @edit="editingProject = $event"
         />
       </div>
     </div>
@@ -110,6 +111,14 @@
       v-if="showCreateProject"
       @close="showCreateProject = false"
       @created="handleProjectCreated"
+    />
+
+    <!-- Edit project modal -->
+    <EditProjectModal
+      v-if="editingProject"
+      :project="editingProject"
+      @close="editingProject = null"
+      @updated="editingProject = null"
     />
   </div>
 </template>
@@ -121,11 +130,14 @@ import { useAuthStore } from '@/stores/auth'
 import { useProjectsStore } from '@/stores/projects'
 import ProjectCard from '@/components/projects/ProjectCard.vue'
 import CreateProjectModal from '@/components/projects/CreateProjectModal.vue'
+import EditProjectModal from '@/components/projects/EditProjectModal.vue'
+import type { Project } from '@/types'
 
 const authStore = useAuthStore()
 const projectsStore = useProjectsStore()
 const router = useRouter()
 const showCreateProject = ref(false)
+const editingProject = ref<Project | null>(null)
 const activeFilter = ref<'all' | 'active' | 'on_hold' | 'completed'>('all')
 
 const filters = [
