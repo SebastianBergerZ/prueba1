@@ -54,7 +54,6 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   async function ensureDefaultWorkspace(firebaseUser: User): Promise<void> {
-    // First: check if user is a member of any workspace (covers both owners and invited members)
     const memberQuery = query(
       collection(db, 'workspaces'),
       where('members', 'array-contains', firebaseUser.uid)
@@ -62,14 +61,16 @@ export const useAuthStore = defineStore('auth', () => {
     const memberSnap = await getDocs(memberQuery)
 
     if (!memberSnap.empty) {
-      // Prefer a workspace they own, otherwise use the first one they belong to
+      // Prefer a workspace the user was invited to (not owner).
+      // This ensures invited members see the shared workspace, not their own empty one.
+      const invited = memberSnap.docs.find((d) => d.data().ownerId !== firebaseUser.uid)
       const owned = memberSnap.docs.find((d) => d.data().ownerId === firebaseUser.uid)
-      const ws = owned ?? memberSnap.docs[0]
+      const ws = invited ?? owned ?? memberSnap.docs[0]
       currentWorkspace.value = { id: ws.id, ...ws.data() } as Workspace
       return
     }
 
-    // No workspace found — create a personal one for this user
+    // No workspace found — create a personal one
     const wsRef = await addDoc(collection(db, 'workspaces'), {
       name: `${firebaseUser.displayName?.split(' ')[0] ?? 'My'}'s Workspace`,
       ownerId: firebaseUser.uid,
