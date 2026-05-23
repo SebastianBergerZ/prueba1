@@ -8,7 +8,6 @@ import {
   deleteDoc,
   query,
   where,
-  orderBy,
   onSnapshot,
   serverTimestamp,
   type Unsubscribe
@@ -62,32 +61,32 @@ export const useTasksStore = defineStore('tasks', () => {
 
     loading.value = true
 
-    // Subscribe to sections
+    // Subscribe to sections — no orderBy to avoid composite index requirement
     const sectionsQuery = query(
       collection(db, 'sections'),
-      where('projectId', '==', projectId),
-      orderBy('order', 'asc')
+      where('projectId', '==', projectId)
     )
     unsubscribeSections = onSnapshot(
       sectionsQuery,
       (snap) => {
-        sections.value = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Section))
+        sections.value = snap.docs
+          .map((d) => ({ id: d.id, ...d.data() } as Section))
+          .sort((a, b) => a.order - b.order)
       },
-      (err) => {
-        error.value = err.message
-      }
+      (err) => { error.value = err.message }
     )
 
-    // Subscribe to tasks
+    // Subscribe to tasks — no orderBy to avoid composite index requirement
     const tasksQuery = query(
       collection(db, 'tasks'),
-      where('projectId', '==', projectId),
-      orderBy('order', 'asc')
+      where('projectId', '==', projectId)
     )
     unsubscribeTasks = onSnapshot(
       tasksQuery,
       (snap) => {
-        tasks.value = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Task))
+        tasks.value = snap.docs
+          .map((d) => ({ id: d.id, ...d.data() } as Task))
+          .sort((a, b) => a.order - b.order)
         loading.value = false
       },
       (err) => {
