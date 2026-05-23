@@ -72,6 +72,17 @@
           />
         </div>
 
+        <!-- Assignee -->
+        <div>
+          <label class="label">Assignee</label>
+          <select v-model="form.assigneeId" class="input-field">
+            <option :value="null">Unassigned</option>
+            <option v-for="m in membersStore.members" :key="m.uid" :value="m.uid">
+              {{ m.displayName }} ({{ m.email }})
+            </option>
+          </select>
+        </div>
+
         <!-- Tags -->
         <div>
           <label class="label">Tags</label>
@@ -129,6 +140,7 @@
 <script setup lang="ts">
 import { ref, reactive, computed, nextTick, onMounted } from 'vue'
 import { useTasksStore } from '@/stores/tasks'
+import { useMembersStore } from '@/stores/members'
 import type { Task, TaskStatus, TaskPriority } from '@/types'
 
 const props = defineProps<{
@@ -144,6 +156,7 @@ const emit = defineEmits<{
 }>()
 
 const tasksStore = useTasksStore()
+const membersStore = useMembersStore()
 const titleInput = ref<HTMLInputElement | null>(null)
 const loading = ref(false)
 const error = ref<string | null>(null)
@@ -154,6 +167,7 @@ const form = reactive({
   description: props.task?.description ?? '',
   status: (props.task?.status ?? props.defaultStatus ?? 'todo') as TaskStatus,
   priority: (props.task?.priority ?? 'medium') as TaskPriority,
+  assigneeId: props.task?.assigneeId ?? null as string | null,
   dueDateStr: '',
   tags: [...(props.task?.tags ?? [])]
 })
@@ -174,7 +188,10 @@ const defaultSectionId = computed(() => {
   return match?.id ?? sections[0]?.id ?? ''
 })
 
-onMounted(() => nextTick(() => titleInput.value?.focus()))
+onMounted(() => {
+  nextTick(() => titleInput.value?.focus())
+  if (membersStore.members.length === 0) membersStore.fetchMembers()
+})
 
 function addTag() {
   const tag = newTag.value.trim()
@@ -213,7 +230,7 @@ async function handleSubmit() {
         description: form.description.trim(),
         projectId: props.projectId,
         workspaceId: props.workspaceId,
-        assigneeId: null,
+        assigneeId: form.assigneeId,
         dueDate,
         priority: form.priority,
         status: form.status,

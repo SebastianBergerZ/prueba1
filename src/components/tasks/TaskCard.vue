@@ -44,9 +44,15 @@
       </div>
       <span v-else></span>
 
-      <!-- Assignee -->
-      <div v-if="task.assigneeId" class="w-6 h-6 rounded-full bg-primary-200 flex items-center justify-center">
-        <span class="text-xs font-medium text-primary-700">{{ task.assigneeId.slice(0, 1).toUpperCase() }}</span>
+      <!-- Assignee avatar -->
+      <div
+        v-if="assignee"
+        class="w-6 h-6 rounded-full flex items-center justify-center overflow-hidden flex-shrink-0"
+        :class="assignee.photoURL ? '' : 'bg-primary-500'"
+        :title="assignee.displayName"
+      >
+        <img v-if="assignee.photoURL" :src="assignee.photoURL" :alt="assignee.displayName" class="w-full h-full object-cover" />
+        <span v-else class="text-xs font-bold text-white">{{ membersStore.getInitials(assignee.displayName) }}</span>
       </div>
     </div>
 
@@ -67,9 +73,12 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useMembersStore } from '@/stores/members'
 import type { Task, TaskStatus } from '@/types'
 
 const props = defineProps<{ task: Task }>()
+const membersStore = useMembersStore()
+const assignee = computed(() => props.task.assigneeId ? membersStore.getMemberById(props.task.assigneeId) : null)
 defineEmits<{ move: [taskId: string, status: TaskStatus] }>()
 
 const ALL_STATUSES: { id: TaskStatus; label: string }[] = [

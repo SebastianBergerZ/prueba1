@@ -35,6 +35,11 @@ const routes: RouteRecordRaw[] = [
         name: 'task-detail',
         component: () => import('@/views/TaskDetailView.vue'),
         props: true
+      },
+      {
+        path: 'members',
+        name: 'members',
+        component: () => import('@/views/MembersView.vue')
       }
     ]
   },
