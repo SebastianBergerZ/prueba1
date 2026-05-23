@@ -30,6 +30,11 @@ const routes: RouteRecordRaw[] = [
         component: () => import('@/views/MyTasksView.vue')
       },
       {
+        path: 'inbox',
+        name: 'inbox',
+        component: () => import('@/views/InboxView.vue')
+      },
+      {
         path: 'project/:id',
         name: 'project',
         component: () => import('@/views/ProjectView.vue'),
