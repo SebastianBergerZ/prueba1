@@ -9,7 +9,7 @@ import {
   updateProfile,
   type User
 } from 'firebase/auth'
-import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore'
+import { doc, setDoc, getDoc, serverTimestamp, collection, query, where, getDocs, addDoc } from 'firebase/firestore'
 import { auth, googleProvider, db } from '@/firebase'
 import type { AppUser, Workspace } from '@/types'
 
@@ -54,7 +54,6 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   async function ensureDefaultWorkspace(firebaseUser: User): Promise<void> {
-    const { collection, query, where, getDocs, addDoc } = await import('firebase/firestore')
     const wsQuery = query(
       collection(db, 'workspaces'),
       where('ownerId', '==', firebaseUser.uid)
