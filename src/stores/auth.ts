@@ -54,29 +54,34 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   async function ensureDefaultWorkspace(firebaseUser: User): Promise<void> {
-    const wsQuery = query(
+    // First: check if user is a member of any workspace (covers both owners and invited members)
+    const memberQuery = query(
       collection(db, 'workspaces'),
-      where('ownerId', '==', firebaseUser.uid)
+      where('members', 'array-contains', firebaseUser.uid)
     )
-    const snap = await getDocs(wsQuery)
+    const memberSnap = await getDocs(memberQuery)
 
-    if (snap.empty) {
-      const wsRef = await addDoc(collection(db, 'workspaces'), {
-        name: `${firebaseUser.displayName?.split(' ')[0] ?? 'My'}'s Workspace`,
-        ownerId: firebaseUser.uid,
-        members: [firebaseUser.uid],
-        createdAt: serverTimestamp()
-      })
-      currentWorkspace.value = {
-        id: wsRef.id,
-        name: `${firebaseUser.displayName?.split(' ')[0] ?? 'My'}'s Workspace`,
-        ownerId: firebaseUser.uid,
-        members: [firebaseUser.uid],
-        createdAt: new Date()
-      }
-    } else {
-      const ws = snap.docs[0]
+    if (!memberSnap.empty) {
+      // Prefer a workspace they own, otherwise use the first one they belong to
+      const owned = memberSnap.docs.find((d) => d.data().ownerId === firebaseUser.uid)
+      const ws = owned ?? memberSnap.docs[0]
       currentWorkspace.value = { id: ws.id, ...ws.data() } as Workspace
+      return
+    }
+
+    // No workspace found — create a personal one for this user
+    const wsRef = await addDoc(collection(db, 'workspaces'), {
+      name: `${firebaseUser.displayName?.split(' ')[0] ?? 'My'}'s Workspace`,
+      ownerId: firebaseUser.uid,
+      members: [firebaseUser.uid],
+      createdAt: serverTimestamp()
+    })
+    currentWorkspace.value = {
+      id: wsRef.id,
+      name: `${firebaseUser.displayName?.split(' ')[0] ?? 'My'}'s Workspace`,
+      ownerId: firebaseUser.uid,
+      members: [firebaseUser.uid],
+      createdAt: new Date()
     }
   }
 
