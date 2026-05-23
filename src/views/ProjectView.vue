@@ -210,11 +210,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { ref, computed, onUnmounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useProjectsStore } from '@/stores/projects'
 import { useTasksStore } from '@/stores/tasks'
-import { useAuthStore } from '@/stores/auth'
 import TaskCard from '@/components/tasks/TaskCard.vue'
 import TaskRow from '@/components/tasks/TaskRow.vue'
 import CreateTaskModal from '@/components/tasks/CreateTaskModal.vue'
@@ -226,7 +225,6 @@ const props = defineProps<{ id: string }>()
 const route = useRoute()
 const projectsStore = useProjectsStore()
 const tasksStore = useTasksStore()
-const authStore = useAuthStore()
 
 const viewMode = ref<'board' | 'list'>('board')
 const showCreateTask = ref(false)
@@ -268,12 +266,6 @@ function handleTaskSaved() {
 // Subscribe when project changes
 watch(() => props.id, (newId) => {
   tasksStore.subscribeToProject(newId)
-
-  // Also ensure projects are loaded
-  const workspaceId = authStore.currentWorkspace?.id
-  if (workspaceId && projectsStore.projects.length === 0) {
-    projectsStore.subscribeToProjects(workspaceId)
-  }
 }, { immediate: true })
 
 onUnmounted(() => {

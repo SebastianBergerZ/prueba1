@@ -124,7 +124,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useProjectsStore } from '@/stores/projects'
@@ -162,17 +162,6 @@ const timeOfDay = computed(() => {
 const filteredProjects = computed(() => {
   if (activeFilter.value === 'all') return projectsStore.projects
   return projectsStore.projects.filter((p) => p.status === activeFilter.value)
-})
-
-onMounted(() => {
-  const workspaceId = authStore.currentWorkspace?.id
-  if (workspaceId) {
-    projectsStore.subscribeToProjects(workspaceId)
-  }
-})
-
-onUnmounted(() => {
-  projectsStore.unsubscribeFromProjects()
 })
 
 function handleProjectCreated(projectId: string) {
