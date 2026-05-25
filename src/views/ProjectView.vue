@@ -41,6 +41,17 @@
                   d="M4 6h16M4 10h16M4 14h16M4 18h16" />
               </svg>
             </button>
+            <button
+              @click="viewMode = 'calendar'"
+              class="p-1.5 rounded-md transition-colors"
+              :class="viewMode === 'calendar' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'"
+              title="Calendar view"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+            </button>
           </div>
 
           <button v-if="!isViewer" @click="showEditProject = true" class="btn-secondary gap-2">
@@ -231,6 +242,11 @@
           </div>
         </div>
       </div>
+
+      <!-- Calendar view -->
+      <div v-if="viewMode === 'calendar'" class="flex-1 overflow-y-auto">
+        <CalendarView :tasks="tasksStore.tasks" />
+      </div>
     </div>
 
     <!-- Edit project modal -->
@@ -264,6 +280,7 @@ import TaskCard from '@/components/tasks/TaskCard.vue'
 import TaskRow from '@/components/tasks/TaskRow.vue'
 import CreateTaskModal from '@/components/tasks/CreateTaskModal.vue'
 import EditProjectModal from '@/components/projects/EditProjectModal.vue'
+import CalendarView from '@/components/project/CalendarView.vue'
 import type { Section } from '@/types'
 
 const props = defineProps<{ id: string }>()
@@ -275,7 +292,7 @@ const customFieldsStore = useCustomFieldsStore()
 const membersStore = useMembersStore()
 const isViewer = computed(() => membersStore.isViewer)
 
-const viewMode = ref<'board' | 'list'>('board')
+const viewMode = ref<'board' | 'list' | 'calendar'>('board')
 const showCreateTask = ref(false)
 const showEditProject = ref(false)
 const createTaskDefaultSectionId = ref<string>('')
