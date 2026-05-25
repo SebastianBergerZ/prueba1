@@ -188,7 +188,7 @@
       </div>
 
       <!-- List view -->
-      <div v-else class="p-6 max-w-5xl">
+      <div v-else-if="viewMode === 'list'" class="p-6 max-w-5xl">
         <div v-if="tasksStore.loading" class="card">
           <div v-for="i in 5" :key="i" class="flex items-center gap-3 px-4 py-3 border-b border-gray-100">
             <div class="w-5 h-5 rounded-full bg-gray-200 animate-pulse"></div>
