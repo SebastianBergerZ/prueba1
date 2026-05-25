@@ -93,6 +93,17 @@ export interface CustomField {
 
 export type CustomFieldValue = string | number | boolean | null
 
+// ─── Comments ─────────────────────────────────────────────────────────────────
+
+export interface Comment {
+  id: string
+  taskId: string
+  authorId: string
+  text: string
+  createdAt: Timestamp | Date
+  updatedAt?: Timestamp | Date
+}
+
 // ─── UI Helpers ──────────────────────────────────────────────────────────────
 
 export interface KanbanColumn {

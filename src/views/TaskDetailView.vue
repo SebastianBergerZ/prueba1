@@ -297,7 +297,7 @@
       </div>
 
       <!-- Description -->
-      <div class="px-6 py-4">
+      <div class="px-6 py-4 border-b border-gray-100">
         <p class="text-xs font-medium text-gray-500 mb-2">Description</p>
         <textarea
           v-model="descriptionValue"
@@ -307,6 +307,86 @@
           rows="5"
           @blur="saveDescription"
         ></textarea>
+      </div>
+
+      <!-- Comments -->
+      <div class="px-6 py-4">
+        <p class="text-xs font-medium text-gray-500 mb-4">
+          Comments <span v-if="commentsStore.comments.length" class="text-gray-400">({{ commentsStore.comments.length }})</span>
+        </p>
+
+        <!-- Comment list -->
+        <div class="space-y-4 mb-4">
+          <div v-for="comment in commentsStore.comments" :key="comment.id" class="flex gap-3 group/comment">
+            <!-- Avatar -->
+            <div class="w-7 h-7 rounded-full flex-shrink-0 flex items-center justify-center overflow-hidden bg-primary-500 mt-0.5">
+              <img v-if="getCommentAuthor(comment.authorId)?.photoURL" :src="getCommentAuthor(comment.authorId)!.photoURL!" class="w-full h-full object-cover" />
+              <span v-else class="text-xs font-bold text-white">{{ membersStore.getInitials(getCommentAuthor(comment.authorId)?.displayName ?? '?') }}</span>
+            </div>
+
+            <div class="flex-1 min-w-0">
+              <!-- Header -->
+              <div class="flex items-baseline gap-2 mb-1">
+                <span class="text-xs font-semibold text-gray-800">{{ getCommentAuthor(comment.authorId)?.displayName ?? 'Unknown' }}</span>
+                <span class="text-xs text-gray-400">{{ formatCommentDate(comment.createdAt) }}</span>
+                <span v-if="comment.updatedAt" class="text-xs text-gray-400 italic">edited</span>
+              </div>
+
+              <!-- Text or edit input -->
+              <template v-if="editingCommentId === comment.id">
+                <textarea
+                  v-model="editingCommentText"
+                  class="w-full text-sm border border-primary-400 rounded-md px-2 py-1.5 resize-none focus:outline-none focus:ring-1 focus:ring-primary-500"
+                  rows="2"
+                  @keydown.enter.exact.prevent="saveCommentEdit(comment.id)"
+                  @keydown.escape="cancelCommentEdit"
+                ></textarea>
+                <div class="flex gap-2 mt-1.5">
+                  <button @click="saveCommentEdit(comment.id)" class="text-xs btn-primary px-2.5 py-1">Save</button>
+                  <button @click="cancelCommentEdit" class="text-xs btn-secondary px-2.5 py-1">Cancel</button>
+                </div>
+              </template>
+              <p v-else class="text-sm text-gray-700 whitespace-pre-wrap break-words">{{ comment.text }}</p>
+
+              <!-- Actions (own comment or owner) -->
+              <div
+                v-if="editingCommentId !== comment.id && canModifyComment(comment)"
+                class="flex gap-3 mt-1 opacity-0 group-hover/comment:opacity-100 transition-opacity"
+              >
+                <button @click="startCommentEdit(comment)" class="text-xs text-gray-400 hover:text-gray-600">Edit</button>
+                <button @click="handleDeleteComment(comment.id)" class="text-xs text-gray-400 hover:text-red-500">Delete</button>
+              </div>
+            </div>
+          </div>
+
+          <p v-if="commentsStore.comments.length === 0" class="text-xs text-gray-400 italic">No comments yet.</p>
+        </div>
+
+        <!-- Add comment (not for viewers) -->
+        <div v-if="!isViewer" class="flex gap-3">
+          <div class="w-7 h-7 rounded-full flex-shrink-0 flex items-center justify-center overflow-hidden bg-primary-500 mt-0.5">
+            <img v-if="authStore.photoURL" :src="authStore.photoURL" class="w-full h-full object-cover" />
+            <span v-else class="text-xs font-bold text-white">{{ membersStore.getInitials(authStore.displayName) }}</span>
+          </div>
+          <div class="flex-1">
+            <textarea
+              v-model="newComment"
+              placeholder="Write a comment..."
+              class="w-full text-sm border border-gray-200 rounded-md px-3 py-2 resize-none focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-400 transition-colors"
+              rows="2"
+              @keydown.enter.exact.prevent="submitComment"
+            ></textarea>
+            <div class="flex justify-end mt-1.5">
+              <button
+                @click="submitComment"
+                :disabled="!newComment.trim()"
+                class="btn-primary text-xs px-3 py-1.5 disabled:opacity-50"
+              >
+                Comment
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -330,8 +410,9 @@ import { useProjectsStore } from '@/stores/projects'
 import { useAuthStore } from '@/stores/auth'
 import { useCustomFieldsStore } from '@/stores/customFields'
 import { useMembersStore } from '@/stores/members'
+import { useCommentsStore } from '@/stores/comments'
 import CreateTaskModal from '@/components/tasks/CreateTaskModal.vue'
-import type { TaskStatus, TaskPriority, CustomField, CustomFieldType, CustomFieldValue } from '@/types'
+import type { TaskStatus, TaskPriority, CustomField, CustomFieldType, CustomFieldValue, Comment } from '@/types'
 
 const props = defineProps<{ projectId: string; taskId: string }>()
 const router = useRouter()
@@ -340,7 +421,12 @@ const projectsStore = useProjectsStore()
 const authStore = useAuthStore()
 const customFieldsStore = useCustomFieldsStore()
 const membersStore = useMembersStore()
+const commentsStore = useCommentsStore()
 const isViewer = computed(() => membersStore.isViewer)
+
+const newComment = ref('')
+const editingCommentId = ref<string | null>(null)
+const editingCommentText = ref('')
 
 const loading = ref(false)
 const showEditModal = ref(false)
@@ -374,6 +460,7 @@ onMounted(() => {
     projectsStore.subscribeToProjects(workspaceId)
   }
   customFieldsStore.subscribeToProject(props.projectId)
+  commentsStore.subscribeToTask(props.taskId)
 })
 
 function startEditField(field: CustomField) {
@@ -488,6 +575,56 @@ async function addTag() {
 async function removeTag(tag: string) {
   if (!task.value) return
   await tasksStore.updateTask({ id: task.value.id, tags: task.value.tags.filter((t) => t !== tag) })
+}
+
+function getCommentAuthor(uid: string) {
+  if (uid === authStore.uid) {
+    return { displayName: authStore.displayName, photoURL: authStore.photoURL, uid }
+  }
+  return membersStore.getMemberById(uid)
+}
+
+function canModifyComment(comment: Comment): boolean {
+  if (isViewer.value) return false
+  return comment.authorId === authStore.uid || membersStore.currentUserRole === 'owner'
+}
+
+function formatCommentDate(date: any): string {
+  const d = 'toDate' in date ? date.toDate() : new Date(date)
+  const now = new Date()
+  const diff = now.getTime() - d.getTime()
+  if (diff < 60_000) return 'just now'
+  if (diff < 3_600_000) return `${Math.floor(diff / 60_000)}m ago`
+  if (diff < 86_400_000) return `${Math.floor(diff / 3_600_000)}h ago`
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+}
+
+async function submitComment() {
+  const text = newComment.value.trim()
+  if (!text || !authStore.uid) return
+  await commentsStore.addComment(props.taskId, authStore.uid, text)
+  newComment.value = ''
+}
+
+function startCommentEdit(comment: Comment) {
+  editingCommentId.value = comment.id
+  editingCommentText.value = comment.text
+}
+
+function cancelCommentEdit() {
+  editingCommentId.value = null
+  editingCommentText.value = ''
+}
+
+async function saveCommentEdit(id: string) {
+  if (!editingCommentText.value.trim()) return
+  await commentsStore.updateComment(id, editingCommentText.value)
+  cancelCommentEdit()
+}
+
+async function handleDeleteComment(id: string) {
+  if (!confirm('Delete this comment?')) return
+  await commentsStore.deleteComment(id)
 }
 
 async function handleDelete() {
