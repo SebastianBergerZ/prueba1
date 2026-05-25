@@ -52,6 +52,17 @@
                   d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
             </button>
+            <button
+              @click="viewMode = 'dashboard'"
+              class="p-1.5 rounded-md transition-colors"
+              :class="viewMode === 'dashboard' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'"
+              title="Dashboard view"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
+            </button>
           </div>
 
           <button v-if="!isViewer" @click="showEditProject = true" class="btn-secondary gap-2">
@@ -247,6 +258,11 @@
       <div v-if="viewMode === 'calendar'" class="flex-1 overflow-y-auto">
         <CalendarView :tasks="tasksStore.tasks" />
       </div>
+
+      <!-- Dashboard view -->
+      <div v-else-if="viewMode === 'dashboard'" class="flex-1 overflow-hidden">
+        <DashboardView :tasks="tasksStore.tasks" :sections="tasksStore.sections" />
+      </div>
     </div>
 
     <!-- Edit project modal -->
@@ -281,6 +297,7 @@ import TaskRow from '@/components/tasks/TaskRow.vue'
 import CreateTaskModal from '@/components/tasks/CreateTaskModal.vue'
 import EditProjectModal from '@/components/projects/EditProjectModal.vue'
 import CalendarView from '@/components/project/CalendarView.vue'
+import DashboardView from '@/components/project/DashboardView.vue'
 import type { Section } from '@/types'
 
 const props = defineProps<{ id: string }>()
@@ -292,7 +309,7 @@ const customFieldsStore = useCustomFieldsStore()
 const membersStore = useMembersStore()
 const isViewer = computed(() => membersStore.isViewer)
 
-const viewMode = ref<'board' | 'list' | 'calendar'>('board')
+const viewMode = ref<'board' | 'list' | 'calendar' | 'dashboard'>('board')
 const showCreateTask = ref(false)
 const showEditProject = ref(false)
 const createTaskDefaultSectionId = ref<string>('')
