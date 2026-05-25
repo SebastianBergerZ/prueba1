@@ -163,7 +163,6 @@ function taskChipClass(task: Task): string {
   const d = taskDueDate(task)
   const now = new Date()
   now.setHours(0, 0, 0, 0)
-  if (task.status === 'done') return 'bg-gray-100 text-gray-500 line-through'
   if (d && d < now) return 'bg-red-100 text-red-700'
   const map: Record<string, string> = {
     urgent: 'bg-red-50 text-red-600',
