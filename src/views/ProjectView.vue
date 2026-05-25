@@ -195,7 +195,7 @@
           </div>
 
           <template v-for="col in tasksStore.sectionColumns" :key="col.section.id">
-            <div v-if="col.tasks.length > 0">
+            <div>
               <div
                 class="flex items-center gap-2 px-4 py-2 bg-gray-50/50 border-b border-gray-100 cursor-pointer"
                 @click="toggleSection(col.section.id)"
@@ -216,6 +216,9 @@
                   @move="handleMoveTask"
                   @delete="handleDeleteTask"
                 />
+                <div v-if="col.tasks.length === 0" class="px-4 py-3 text-xs text-gray-400 italic">
+                  No tasks in this column
+                </div>
               </template>
             </div>
           </template>
