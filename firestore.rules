@@ -1,0 +1,9 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // All authenticated users can read/write — the app enforces workspace boundaries in code
+    match /{document=**} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}

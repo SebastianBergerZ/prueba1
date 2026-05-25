@@ -9,25 +9,32 @@ import type { CustomField, CustomFieldType, CustomFieldValue } from '@/types'
 
 export const useCustomFieldsStore = defineStore('customFields', () => {
   const fields = ref<CustomField[]>([])
+  const currentProjectId = ref<string | null>(null)
   let unsubscribe: Unsubscribe | null = null
 
   function subscribeToProject(projectId: string): void {
+    // Already subscribed to this project — no-op to avoid race with route transitions
+    if (currentProjectId.value === projectId && unsubscribe) return
     if (unsubscribe) unsubscribe()
+    currentProjectId.value = projectId
     const q = query(collection(db, 'customFields'), where('projectId', '==', projectId))
     unsubscribe = onSnapshot(q, (snap) => {
       fields.value = snap.docs
         .map((d) => ({ id: d.id, ...d.data() } as CustomField))
         .sort((a, b) => a.order - b.order)
+    }, (err) => {
+      console.error('customFields snapshot error:', err)
     })
   }
 
   function unsubscribeFromProject(): void {
     if (unsubscribe) { unsubscribe(); unsubscribe = null }
+    currentProjectId.value = null
     fields.value = []
   }
 
   async function createField(projectId: string, name: string, type: CustomFieldType, options: string[] = []): Promise<string> {
-    const ref = await addDoc(collection(db, 'customFields'), {
+    const docRef = await addDoc(collection(db, 'customFields'), {
       projectId,
       name: name.trim(),
       type,
@@ -35,7 +42,7 @@ export const useCustomFieldsStore = defineStore('customFields', () => {
       order: fields.value.length,
       createdAt: serverTimestamp()
     })
-    return ref.id
+    return docRef.id
   }
 
   async function updateField(id: string, data: Partial<Pick<CustomField, 'name' | 'type' | 'options'>>): Promise<void> {

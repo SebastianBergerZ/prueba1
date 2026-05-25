@@ -252,9 +252,10 @@
               placeholder="Option A&#10;Option B&#10;Option C"
             ></textarea>
           </div>
+          <p v-if="fieldError" class="text-xs text-red-600">{{ fieldError }}</p>
           <div class="flex gap-2">
             <button @click="handleCreateField" class="btn-primary text-xs px-3 py-1.5" :disabled="!newField.name.trim()">Create field</button>
-            <button @click="showAddField = false" class="btn-secondary text-xs px-3 py-1.5">Cancel</button>
+            <button @click="showAddField = false; fieldError = ''" class="btn-secondary text-xs px-3 py-1.5">Cancel</button>
           </div>
         </div>
       </div>
@@ -308,7 +309,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, reactive, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useTasksStore } from '@/stores/tasks'
 import { useProjectsStore } from '@/stores/projects'
@@ -335,6 +336,7 @@ const showAddField = ref(false)
 const editingFieldId = ref<string | null>(null)
 const editingFieldName = ref('')
 const newField = reactive({ name: '', type: 'text' as CustomFieldType, optionsRaw: '' })
+const fieldError = ref('')
 
 const task = computed(() => tasksStore.getTaskById(props.taskId))
 
@@ -355,10 +357,6 @@ onMounted(() => {
     projectsStore.subscribeToProjects(workspaceId)
   }
   customFieldsStore.subscribeToProject(props.projectId)
-})
-
-onUnmounted(() => {
-  customFieldsStore.unsubscribeFromProject()
 })
 
 function startEditField(field: CustomField) {
@@ -387,14 +385,19 @@ async function setFieldValue(fieldId: string, value: CustomFieldValue) {
 async function handleCreateField() {
   const name = newField.name.trim()
   if (!name) return
-  const options = newField.type === 'dropdown'
-    ? newField.optionsRaw.split('\n').map((o) => o.trim()).filter(Boolean)
-    : []
-  await customFieldsStore.createField(props.projectId, name, newField.type, options)
-  newField.name = ''
-  newField.type = 'text'
-  newField.optionsRaw = ''
-  showAddField.value = false
+  fieldError.value = ''
+  try {
+    const options = newField.type === 'dropdown'
+      ? newField.optionsRaw.split('\n').map((o) => o.trim()).filter(Boolean)
+      : []
+    await customFieldsStore.createField(props.projectId, name, newField.type, options)
+    newField.name = ''
+    newField.type = 'text'
+    newField.optionsRaw = ''
+    showAddField.value = false
+  } catch (e: any) {
+    fieldError.value = e?.message ?? 'Failed to create field. Check Firestore rules.'
+  }
 }
 
 const startDateValue = computed(() => {

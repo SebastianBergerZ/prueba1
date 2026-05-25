@@ -151,6 +151,7 @@ export const useTasksStore = defineStore('tasks', () => {
       sectionId: payload.sectionId,
       order,
       tags: payload.tags,
+      customFieldValues: {},
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
     })
