@@ -83,48 +83,98 @@
         </div>
 
         <!-- Custom fields -->
-        <div v-if="customFieldsStore.fields.length > 0" class="space-y-3">
-          <p class="label">Custom fields</p>
-          <div v-for="field in customFieldsStore.fields" :key="field.id">
-            <label class="label text-xs font-normal text-gray-500">{{ field.name }}</label>
-            <input
-              v-if="field.type === 'text'"
-              v-model="customFieldValues[field.id]"
-              type="text"
-              class="input-field"
-              placeholder="Empty"
-            />
-            <input
-              v-else-if="field.type === 'number'"
-              :value="customFieldValues[field.id] ?? ''"
-              type="number"
-              class="input-field"
-              placeholder="0"
-              @input="customFieldValues[field.id] = ($event.target as HTMLInputElement).value !== '' ? Number(($event.target as HTMLInputElement).value) : null"
-            />
-            <input
-              v-else-if="field.type === 'date'"
-              v-model="customFieldValues[field.id]"
-              type="date"
-              class="input-field"
-            />
-            <label v-else-if="field.type === 'checkbox'" class="flex items-center gap-2 cursor-pointer">
-              <input
-                :checked="!!(customFieldValues[field.id])"
-                type="checkbox"
-                class="w-4 h-4 rounded text-primary-600 focus:ring-primary-500"
-                @change="customFieldValues[field.id] = ($event.target as HTMLInputElement).checked"
-              />
-              <span class="text-sm text-gray-600">{{ customFieldValues[field.id] ? 'Yes' : 'No' }}</span>
-            </label>
-            <select
-              v-else-if="field.type === 'dropdown'"
-              v-model="customFieldValues[field.id]"
-              class="input-field"
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <p class="label mb-0">Custom fields</p>
+            <button
+              type="button"
+              @click="showAddField = !showAddField"
+              class="text-xs text-primary-600 hover:text-primary-700 font-medium flex items-center gap-1"
             >
-              <option value="">— Select —</option>
-              <option v-for="opt in field.options" :key="opt" :value="opt">{{ opt }}</option>
-            </select>
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+              </svg>
+              Add field
+            </button>
+          </div>
+
+          <!-- Existing fields with value editors -->
+          <div class="space-y-3">
+            <div v-for="field in customFieldsStore.fields" :key="field.id">
+              <label class="label text-xs font-normal text-gray-500">{{ field.name }}</label>
+              <input
+                v-if="field.type === 'text'"
+                v-model="customFieldValues[field.id]"
+                type="text"
+                class="input-field"
+                placeholder="Empty"
+              />
+              <input
+                v-else-if="field.type === 'number'"
+                :value="customFieldValues[field.id] ?? ''"
+                type="number"
+                class="input-field"
+                placeholder="0"
+                @input="customFieldValues[field.id] = ($event.target as HTMLInputElement).value !== '' ? Number(($event.target as HTMLInputElement).value) : null"
+              />
+              <input
+                v-else-if="field.type === 'date'"
+                v-model="customFieldValues[field.id]"
+                type="date"
+                class="input-field"
+              />
+              <label v-else-if="field.type === 'checkbox'" class="flex items-center gap-2 cursor-pointer">
+                <input
+                  :checked="!!(customFieldValues[field.id])"
+                  type="checkbox"
+                  class="w-4 h-4 rounded text-primary-600 focus:ring-primary-500"
+                  @change="customFieldValues[field.id] = ($event.target as HTMLInputElement).checked"
+                />
+                <span class="text-sm text-gray-600">{{ customFieldValues[field.id] ? 'Yes' : 'No' }}</span>
+              </label>
+              <select
+                v-else-if="field.type === 'dropdown'"
+                v-model="customFieldValues[field.id]"
+                class="input-field"
+              >
+                <option value="">— Select —</option>
+                <option v-for="opt in field.options" :key="opt" :value="opt">{{ opt }}</option>
+              </select>
+            </div>
+
+            <p v-if="customFieldsStore.fields.length === 0 && !showAddField" class="text-xs text-gray-400 italic">
+              No custom fields yet — click "Add field" to create one.
+            </p>
+          </div>
+
+          <!-- Inline add-field form -->
+          <div v-if="showAddField" class="mt-3 border border-gray-200 rounded-lg p-3 space-y-2 bg-gray-50">
+            <p class="text-xs font-semibold text-gray-700">New field</p>
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="label text-xs">Name</label>
+                <input v-model="newFieldForm.name" type="text" placeholder="e.g. Budget" class="input-field text-sm" maxlength="50" />
+              </div>
+              <div>
+                <label class="label text-xs">Type</label>
+                <select v-model="newFieldForm.type" class="input-field text-sm">
+                  <option value="text">Text</option>
+                  <option value="number">Number</option>
+                  <option value="date">Date</option>
+                  <option value="checkbox">Checkbox</option>
+                  <option value="dropdown">Dropdown</option>
+                </select>
+              </div>
+            </div>
+            <div v-if="newFieldForm.type === 'dropdown'">
+              <label class="label text-xs">Options <span class="text-gray-400 font-normal">(one per line)</span></label>
+              <textarea v-model="newFieldForm.optionsRaw" class="input-field resize-none text-sm" rows="2" placeholder="Option A&#10;Option B"></textarea>
+            </div>
+            <p v-if="addFieldError" class="text-xs text-red-600">{{ addFieldError }}</p>
+            <div class="flex gap-2">
+              <button type="button" @click="handleCreateField" class="btn-primary text-xs px-3 py-1.5" :disabled="!newFieldForm.name.trim()">Create</button>
+              <button type="button" @click="showAddField = false; addFieldError = ''" class="btn-secondary text-xs px-3 py-1.5">Cancel</button>
+            </div>
           </div>
         </div>
 
@@ -187,7 +237,7 @@ import { ref, reactive, computed, nextTick, onMounted } from 'vue'
 import { useTasksStore } from '@/stores/tasks'
 import { useMembersStore } from '@/stores/members'
 import { useCustomFieldsStore } from '@/stores/customFields'
-import type { Task, TaskStatus, TaskPriority, CustomFieldValue } from '@/types'
+import type { Task, TaskStatus, TaskPriority, CustomFieldType, CustomFieldValue } from '@/types'
 
 const props = defineProps<{
   projectId: string
@@ -209,6 +259,9 @@ const loading = ref(false)
 const error = ref<string | null>(null)
 const newTag = ref('')
 const customFieldValues = reactive<Record<string, CustomFieldValue>>({})
+const showAddField = ref(false)
+const addFieldError = ref('')
+const newFieldForm = reactive({ name: '', type: 'text' as CustomFieldType, optionsRaw: '' })
 
 const defaultSectionId = computed(() => {
   if (props.task?.sectionId) return props.task.sectionId
@@ -249,6 +302,24 @@ onMounted(() => {
     Object.assign(customFieldValues, props.task.customFieldValues)
   }
 })
+
+async function handleCreateField() {
+  const name = newFieldForm.name.trim()
+  if (!name) return
+  addFieldError.value = ''
+  try {
+    const options = newFieldForm.type === 'dropdown'
+      ? newFieldForm.optionsRaw.split('\n').map((o) => o.trim()).filter(Boolean)
+      : []
+    await customFieldsStore.createField(props.projectId, name, newFieldForm.type, options)
+    newFieldForm.name = ''
+    newFieldForm.type = 'text'
+    newFieldForm.optionsRaw = ''
+    showAddField.value = false
+  } catch (e: any) {
+    addFieldError.value = e?.message ?? 'Failed to create field'
+  }
+}
 
 function addTag() {
   const tag = newTag.value.trim()
