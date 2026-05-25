@@ -87,7 +87,7 @@ defineEmits<{
 const tasksStore = useTasksStore()
 const lastSectionId = computed(() => tasksStore.sections[tasksStore.sections.length - 1]?.id ?? '')
 const firstSectionId = computed(() => tasksStore.sections[0]?.id ?? '')
-const isDone = computed(() => props.task.sectionId === lastSectionId.value || props.task.status === 'done')
+const isDone = computed(() => props.task.status === 'done')
 
 const statusClass = computed(() => {
   const map: Record<string, string> = {
