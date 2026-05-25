@@ -68,31 +68,61 @@
     <!-- Content -->
     <div class="flex-1 overflow-hidden">
       <!-- Board view -->
-      <div v-if="viewMode === 'board'" class="flex gap-4 p-6 h-full overflow-x-auto">
+      <div v-if="viewMode === 'board'" class="flex gap-4 p-6 h-full overflow-x-auto items-start">
         <div
-          v-for="col in tasksStore.kanbanColumns"
-          :key="col.id"
+          v-for="col in tasksStore.sectionColumns"
+          :key="col.section.id"
           class="flex flex-col w-72 min-w-72 flex-shrink-0"
         >
           <!-- Column header -->
-          <div class="flex items-center justify-between mb-3">
-            <div class="flex items-center gap-2">
-              <span class="w-2.5 h-2.5 rounded-full" :class="col.color"></span>
-              <h3 class="text-sm font-semibold text-gray-700">{{ col.label }}</h3>
-              <span class="text-xs text-gray-400 font-normal">{{ col.tasks.length }}</span>
+          <div class="flex items-center justify-between mb-3 group/col">
+            <div class="flex items-center gap-2 flex-1 min-w-0">
+              <!-- Editable section name -->
+              <input
+                v-if="editingSectionId === col.section.id"
+                :ref="el => { if (el) sectionInputRefs[col.section.id] = el as HTMLInputElement }"
+                v-model="editingSectionName"
+                class="text-sm font-semibold text-gray-700 bg-white border border-primary-400 rounded px-1 w-full focus:outline-none"
+                @keydown.enter="saveSection(col.section.id)"
+                @keydown.escape="cancelEditSection"
+                @blur="saveSection(col.section.id)"
+              />
+              <template v-else>
+                <h3
+                  class="text-sm font-semibold text-gray-700 cursor-pointer hover:text-primary-600 truncate"
+                  @click="startEditSection(col.section)"
+                  :title="'Click to rename'"
+                >{{ col.section.name }}</h3>
+                <span class="text-xs text-gray-400 font-normal flex-shrink-0">{{ col.tasks.length }}</span>
+              </template>
             </div>
-            <button
-              @click="openCreateTaskInColumn(col.id as TaskStatus)"
-              class="p-1 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
-            >
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-              </svg>
-            </button>
+
+            <div class="flex items-center gap-1 flex-shrink-0">
+              <!-- Add task to column -->
+              <button
+                @click="openCreateTaskInSection(col.section.id)"
+                class="p-1 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
+                title="Add task"
+              >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                </svg>
+              </button>
+              <!-- Delete column -->
+              <button
+                @click="handleDeleteSection(col.section.id, col.tasks.length)"
+                class="p-1 rounded hover:bg-red-50 text-gray-300 hover:text-red-400 transition-colors opacity-0 group-hover/col:opacity-100"
+                title="Delete column"
+              >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
           </div>
 
           <!-- Task cards -->
-          <div class="flex-1 space-y-2 overflow-y-auto max-h-full pb-4">
+          <div class="space-y-2 overflow-y-auto pb-4">
             <TransitionGroup name="task-list">
               <TaskCard
                 v-for="task in col.tasks"
@@ -102,9 +132,8 @@
               />
             </TransitionGroup>
 
-            <!-- Add task inline -->
             <button
-              @click="openCreateTaskInColumn(col.id as TaskStatus)"
+              @click="openCreateTaskInSection(col.section.id)"
               class="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
             >
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -114,11 +143,39 @@
             </button>
           </div>
         </div>
+
+        <!-- Add column button -->
+        <div class="flex-shrink-0 w-64">
+          <button
+            v-if="!addingSection"
+            @click="addingSection = true"
+            class="w-full flex items-center gap-2 px-4 py-3 rounded-xl border-2 border-dashed border-gray-200 text-gray-400 hover:border-gray-300 hover:text-gray-600 transition-colors text-sm"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+            </svg>
+            Add column
+          </button>
+          <div v-else class="bg-white rounded-xl border border-gray-200 p-3 shadow-sm">
+            <input
+              ref="newSectionInput"
+              v-model="newSectionName"
+              type="text"
+              placeholder="Column name..."
+              class="input-field mb-2 text-sm"
+              @keydown.enter="handleAddSection"
+              @keydown.escape="addingSection = false; newSectionName = ''"
+            />
+            <div class="flex gap-2">
+              <button @click="handleAddSection" class="btn-primary text-xs px-3 py-1.5 flex-1">Add</button>
+              <button @click="addingSection = false; newSectionName = ''" class="btn-secondary text-xs px-3 py-1.5">Cancel</button>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- List view -->
       <div v-else class="p-6 max-w-5xl">
-        <!-- Loading -->
         <div v-if="tasksStore.loading" class="card">
           <div v-for="i in 5" :key="i" class="flex items-center gap-3 px-4 py-3 border-b border-gray-100">
             <div class="w-5 h-5 rounded-full bg-gray-200 animate-pulse"></div>
@@ -128,38 +185,30 @@
         </div>
 
         <div v-else class="card overflow-hidden">
-          <!-- Header row -->
           <div class="flex items-center gap-3 px-4 py-2 bg-gray-50 border-b border-gray-200">
             <span class="w-5 flex-shrink-0"></span>
             <span class="flex-1 text-xs font-semibold text-gray-500 uppercase tracking-wider">Task</span>
-            <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider hidden sm:block w-24">Status</span>
+            <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider hidden sm:block w-24">Column</span>
             <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider hidden md:block w-20">Priority</span>
             <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider w-20">Due</span>
             <span class="w-20 flex-shrink-0"></span>
           </div>
 
-          <!-- Group by status -->
-          <template v-for="col in tasksStore.kanbanColumns" :key="col.id">
+          <template v-for="col in tasksStore.sectionColumns" :key="col.section.id">
             <div v-if="col.tasks.length > 0">
-              <!-- Section header -->
               <div
                 class="flex items-center gap-2 px-4 py-2 bg-gray-50/50 border-b border-gray-100 cursor-pointer"
-                @click="toggleSection(col.id)"
+                @click="toggleSection(col.section.id)"
               >
-                <svg
-                  class="w-3.5 h-3.5 text-gray-400 transition-transform"
-                  :class="{ '-rotate-90': collapsedSections.has(col.id) }"
-                  fill="none" stroke="currentColor" viewBox="0 0 24 24"
-                >
+                <svg class="w-3.5 h-3.5 text-gray-400 transition-transform"
+                  :class="{ '-rotate-90': collapsedSections.has(col.section.id) }"
+                  fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
                 </svg>
-                <span class="w-2 h-2 rounded-full" :class="col.color"></span>
-                <span class="text-xs font-semibold text-gray-600">{{ col.label }}</span>
+                <span class="text-xs font-semibold text-gray-600">{{ col.section.name }}</span>
                 <span class="text-xs text-gray-400">{{ col.tasks.length }}</span>
               </div>
-
-              <!-- Tasks -->
-              <template v-if="!collapsedSections.has(col.id)">
+              <template v-if="!collapsedSections.has(col.section.id)">
                 <TaskRow
                   v-for="task in col.tasks"
                   :key="task.id"
@@ -171,17 +220,7 @@
             </div>
           </template>
 
-          <!-- All done empty state -->
-          <div
-            v-if="tasksStore.tasks.length === 0"
-            class="flex flex-col items-center justify-center py-16 text-center"
-          >
-            <div class="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mb-3">
-              <svg class="w-6 h-6 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-                  d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-              </svg>
-            </div>
+          <div v-if="tasksStore.tasks.length === 0" class="flex flex-col items-center justify-center py-16 text-center">
             <p class="text-sm text-gray-500 mb-3">No tasks yet</p>
             <button @click="showCreateTask = true" class="btn-primary text-sm">Add your first task</button>
           </div>
@@ -202,7 +241,7 @@
       v-if="showCreateTask && project"
       :project-id="project.id"
       :workspace-id="project.workspaceId"
-      :default-status="createTaskDefaultStatus"
+      :default-section-id="createTaskDefaultSectionId"
       @close="showCreateTask = false"
       @saved="handleTaskSaved"
     />
@@ -210,7 +249,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onUnmounted, watch } from 'vue'
+import { ref, computed, nextTick, onUnmounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useProjectsStore } from '@/stores/projects'
 import { useTasksStore } from '@/stores/tasks'
@@ -218,7 +257,7 @@ import TaskCard from '@/components/tasks/TaskCard.vue'
 import TaskRow from '@/components/tasks/TaskRow.vue'
 import CreateTaskModal from '@/components/tasks/CreateTaskModal.vue'
 import EditProjectModal from '@/components/projects/EditProjectModal.vue'
-import type { TaskStatus } from '@/types'
+import type { Section } from '@/types'
 
 const props = defineProps<{ id: string }>()
 
@@ -229,16 +268,26 @@ const tasksStore = useTasksStore()
 const viewMode = ref<'board' | 'list'>('board')
 const showCreateTask = ref(false)
 const showEditProject = ref(false)
-const createTaskDefaultStatus = ref<TaskStatus>('todo')
+const createTaskDefaultSectionId = ref<string>('')
 const collapsedSections = ref<Set<string>>(new Set())
+
+// Section editing
+const editingSectionId = ref<string | null>(null)
+const editingSectionName = ref('')
+const sectionInputRefs: Record<string, HTMLInputElement> = {}
+
+// Add section
+const addingSection = ref(false)
+const newSectionName = ref('')
+const newSectionInput = ref<HTMLInputElement | null>(null)
 
 const project = computed(() => projectsStore.getProjectById(props.id))
 const colorClasses = computed(() =>
   project.value ? projectsStore.getColorClasses(project.value.color) : null
 )
 
-function openCreateTaskInColumn(status: TaskStatus) {
-  createTaskDefaultStatus.value = status
+function openCreateTaskInSection(sectionId: string) {
+  createTaskDefaultSectionId.value = sectionId
   showCreateTask.value = true
 }
 
@@ -250,8 +299,42 @@ function toggleSection(sectionId: string) {
   }
 }
 
-async function handleMoveTask(taskId: string, newStatus: TaskStatus) {
-  await tasksStore.moveTask(taskId, newStatus)
+function startEditSection(section: Section) {
+  editingSectionId.value = section.id
+  editingSectionName.value = section.name
+  nextTick(() => sectionInputRefs[section.id]?.focus())
+}
+
+function cancelEditSection() {
+  editingSectionId.value = null
+  editingSectionName.value = ''
+}
+
+async function saveSection(sectionId: string) {
+  const name = editingSectionName.value.trim()
+  if (name) await tasksStore.updateSection(sectionId, name)
+  cancelEditSection()
+}
+
+async function handleAddSection() {
+  const name = newSectionName.value.trim()
+  if (!name) return
+  await tasksStore.createSection(props.id, name)
+  newSectionName.value = ''
+  addingSection.value = false
+}
+
+async function handleDeleteSection(sectionId: string, taskCount: number) {
+  if (taskCount > 0) {
+    alert(`Cannot delete a column that has ${taskCount} task${taskCount > 1 ? 's' : ''}. Move or delete the tasks first.`)
+    return
+  }
+  if (!confirm('Delete this column?')) return
+  await tasksStore.deleteSection(sectionId)
+}
+
+async function handleMoveTask(taskId: string, sectionId: string) {
+  await tasksStore.moveTaskToSection(taskId, sectionId)
 }
 
 async function handleDeleteTask(taskId: string) {
@@ -266,7 +349,13 @@ function handleTaskSaved() {
 // Subscribe when project changes
 watch(() => props.id, (newId) => {
   tasksStore.subscribeToProject(newId)
+  editingSectionId.value = null
+  addingSection.value = false
 }, { immediate: true })
+
+watch(addingSection, (val) => {
+  if (val) nextTick(() => newSectionInput.value?.focus())
+})
 
 onUnmounted(() => {
   tasksStore.unsubscribeFromProject()

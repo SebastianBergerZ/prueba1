@@ -43,6 +43,24 @@ export const useTasksStore = defineStore('tasks', () => {
     }))
   })
 
+  // Section-based columns: the source of truth for the kanban board
+  const sectionColumns = computed(() => {
+    const firstSectionId = sections.value[0]?.id ?? null
+    return sections.value.map((section) => ({
+      section,
+      tasks: tasks.value
+        .filter((t) => {
+          if (t.sectionId === section.id) return true
+          // fallback: orphaned tasks go to first section
+          if (section.id === firstSectionId) {
+            return !sections.value.some((s) => s.id === t.sectionId)
+          }
+          return false
+        })
+        .sort((a, b) => a.order - b.order)
+    }))
+  })
+
   const tasksBySection = computed(() => {
     const map: Record<string, Task[]> = {}
     sections.value.forEach((s) => {
@@ -151,10 +169,28 @@ export const useTasksStore = defineStore('tasks', () => {
   async function moveTask(taskId: string, newStatus: TaskStatus): Promise<void> {
     error.value = null
     const existingInStatus = tasks.value.filter((t) => t.status === newStatus)
-    const order = existingInStatus.length
-
     await updateDoc(doc(db, 'tasks', taskId), {
       status: newStatus,
+      order: existingInStatus.length,
+      updatedAt: serverTimestamp()
+    })
+  }
+
+  async function moveTaskToSection(taskId: string, newSectionId: string): Promise<void> {
+    error.value = null
+    const sectionIndex = sections.value.findIndex((s) => s.id === newSectionId)
+    const total = sections.value.length
+    // Derive a status from section position for inbox/my-tasks compatibility
+    let status: TaskStatus = 'in_progress'
+    if (total <= 1 || sectionIndex === 0) status = 'todo'
+    else if (sectionIndex === total - 1) status = 'done'
+    else if (sectionIndex === 1) status = 'in_progress'
+    else status = 'review'
+
+    const order = tasks.value.filter((t) => t.sectionId === newSectionId).length
+    await updateDoc(doc(db, 'tasks', taskId), {
+      sectionId: newSectionId,
+      status,
       order,
       updatedAt: serverTimestamp()
     })
@@ -196,11 +232,13 @@ export const useTasksStore = defineStore('tasks', () => {
     error,
     kanbanColumns,
     tasksBySection,
+    sectionColumns,
     subscribeToProject,
     unsubscribeFromProject,
     createTask,
     updateTask,
     moveTask,
+    moveTaskToSection,
     deleteTask,
     getTaskById,
     createSection,

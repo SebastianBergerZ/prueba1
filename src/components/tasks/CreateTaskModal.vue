@@ -40,15 +40,12 @@
           ></textarea>
         </div>
 
-        <!-- Row: Status + Priority -->
+        <!-- Row: Column + Priority -->
         <div class="grid grid-cols-2 gap-4">
           <div>
-            <label class="label">Status</label>
-            <select v-model="form.status" class="input-field">
-              <option value="todo">To Do</option>
-              <option value="in_progress">In Progress</option>
-              <option value="review">Review</option>
-              <option value="done">Done</option>
+            <label class="label">Column</label>
+            <select v-model="form.sectionId" class="input-field">
+              <option v-for="s in tasksStore.sections" :key="s.id" :value="s.id">{{ s.name }}</option>
             </select>
           </div>
           <div>
@@ -142,12 +139,13 @@ import { ref, reactive, computed, nextTick, onMounted } from 'vue'
 import { useTasksStore } from '@/stores/tasks'
 import { useMembersStore } from '@/stores/members'
 import type { Task, TaskStatus, TaskPriority } from '@/types'
+// TaskStatus used for derivation inside handleSubmit only
 
 const props = defineProps<{
   projectId: string
   workspaceId: string
   task?: Task | null
-  defaultStatus?: TaskStatus
+  defaultSectionId?: string
 }>()
 
 const emit = defineEmits<{
@@ -162,10 +160,16 @@ const loading = ref(false)
 const error = ref<string | null>(null)
 const newTag = ref('')
 
+const defaultSectionId = computed(() => {
+  if (props.task?.sectionId) return props.task.sectionId
+  if (props.defaultSectionId) return props.defaultSectionId
+  return tasksStore.sections[0]?.id ?? ''
+})
+
 const form = reactive({
   title: props.task?.title ?? '',
   description: props.task?.description ?? '',
-  status: (props.task?.status ?? props.defaultStatus ?? 'todo') as TaskStatus,
+  sectionId: '' as string,
   priority: (props.task?.priority ?? 'medium') as TaskPriority,
   assigneeId: props.task?.assigneeId ?? null as string | null,
   dueDateStr: '',
@@ -179,17 +183,12 @@ if (props.task?.dueDate) {
   form.dueDateStr = date.toISOString().split('T')[0]
 }
 
-const defaultSectionId = computed(() => {
-  const sections = tasksStore.sections
-  const match = sections.find((s) =>
-    s.name.toLowerCase().replace(/\s/g, '_') === form.status ||
-    s.name.toLowerCase() === 'to do' && form.status === 'todo'
-  )
-  return match?.id ?? sections[0]?.id ?? ''
-})
-
 onMounted(() => {
-  nextTick(() => titleInput.value?.focus())
+  nextTick(() => {
+    titleInput.value?.focus()
+    // Set sectionId after sections are available
+    form.sectionId = defaultSectionId.value
+  })
   if (membersStore.members.length === 0) membersStore.fetchMembers()
 })
 
@@ -218,13 +217,20 @@ async function handleSubmit() {
         id: props.task.id,
         title: form.title.trim(),
         description: form.description.trim(),
-        status: form.status,
         priority: form.priority,
         dueDate,
         tags: form.tags
       })
       emit('saved', props.task.id)
     } else {
+      const sectionIndex = tasksStore.sections.findIndex((s) => s.id === form.sectionId)
+      const total = tasksStore.sections.length
+      let status: TaskStatus = 'in_progress'
+      if (sectionIndex === 0) status = 'todo'
+      else if (sectionIndex === total - 1) status = 'done'
+      else if (sectionIndex === 1) status = 'in_progress'
+      else status = 'review'
+
       const id = await tasksStore.createTask({
         title: form.title.trim(),
         description: form.description.trim(),
@@ -233,8 +239,8 @@ async function handleSubmit() {
         assigneeId: form.assigneeId,
         dueDate,
         priority: form.priority,
-        status: form.status,
-        sectionId: defaultSectionId.value,
+        status,
+        sectionId: form.sectionId || defaultSectionId.value,
         tags: form.tags
       })
       emit('saved', id)

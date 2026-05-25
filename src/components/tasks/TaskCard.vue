@@ -57,15 +57,15 @@
     </div>
 
     <!-- Move buttons (shown on hover) -->
-    <div class="hidden group-hover:flex items-center gap-1 mt-2 pt-2 border-t border-gray-100">
+    <div v-if="otherSections.length" class="hidden group-hover:flex items-center gap-1 mt-2 pt-2 border-t border-gray-100 flex-wrap">
       <span class="text-xs text-gray-400 mr-1">Move to:</span>
       <button
-        v-for="col in availableColumns"
-        :key="col.id"
-        @click.stop="$emit('move', task.id, col.id)"
+        v-for="s in otherSections"
+        :key="s.id"
+        @click.stop="$emit('move', task.id, s.id)"
         class="px-2 py-0.5 text-xs rounded border border-gray-200 hover:bg-gray-50 text-gray-600 transition-colors"
       >
-        {{ col.label }}
+        {{ s.name }}
       </button>
     </div>
   </div>
@@ -74,23 +74,16 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useMembersStore } from '@/stores/members'
-import type { Task, TaskStatus } from '@/types'
+import { useTasksStore } from '@/stores/tasks'
+import type { Task } from '@/types'
 
 const props = defineProps<{ task: Task }>()
+const emit = defineEmits<{ move: [taskId: string, sectionId: string] }>()
+
 const membersStore = useMembersStore()
+const tasksStore = useTasksStore()
 const assignee = computed(() => props.task.assigneeId ? membersStore.getMemberById(props.task.assigneeId) : null)
-defineEmits<{ move: [taskId: string, status: TaskStatus] }>()
-
-const ALL_STATUSES: { id: TaskStatus; label: string }[] = [
-  { id: 'todo', label: 'To Do' },
-  { id: 'in_progress', label: 'In Progress' },
-  { id: 'review', label: 'Review' },
-  { id: 'done', label: 'Done' }
-]
-
-const availableColumns = computed(() =>
-  ALL_STATUSES.filter((s) => s.id !== props.task.status)
-)
+const otherSections = computed(() => tasksStore.sections.filter((s) => s.id !== props.task.sectionId))
 
 const priorityClass = computed(() => {
   const map: Record<string, string> = {

@@ -5,13 +5,11 @@
   >
     <!-- Complete checkbox -->
     <button
-      @click.stop="$emit('move', task.id, task.status === 'done' ? 'todo' : 'done')"
+      @click.stop="$emit('move', task.id, isDone ? firstSectionId : lastSectionId)"
       class="flex-shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors"
-      :class="task.status === 'done'
-        ? 'bg-green-500 border-green-500 text-white'
-        : 'border-gray-300 hover:border-green-400'"
+      :class="isDone ? 'bg-green-500 border-green-500 text-white' : 'border-gray-300 hover:border-green-400'"
     >
-      <svg v-if="task.status === 'done'" class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <svg v-if="isDone" class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />
       </svg>
     </button>
@@ -19,7 +17,7 @@
     <!-- Title -->
     <span
       class="flex-1 text-sm text-gray-800 truncate"
-      :class="{ 'line-through text-gray-400': task.status === 'done' }"
+      :class="{ 'line-through text-gray-400': isDone }"
     >
       {{ task.title }}
     </span>
@@ -77,13 +75,19 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import type { Task, TaskStatus } from '@/types'
+import { useTasksStore } from '@/stores/tasks'
+import type { Task } from '@/types'
 
 const props = defineProps<{ task: Task }>()
 defineEmits<{
-  move: [taskId: string, status: TaskStatus]
+  move: [taskId: string, sectionId: string]
   delete: [taskId: string]
 }>()
+
+const tasksStore = useTasksStore()
+const lastSectionId = computed(() => tasksStore.sections[tasksStore.sections.length - 1]?.id ?? '')
+const firstSectionId = computed(() => tasksStore.sections[0]?.id ?? '')
+const isDone = computed(() => props.task.sectionId === lastSectionId.value || props.task.status === 'done')
 
 const statusClass = computed(() => {
   const map: Record<string, string> = {
