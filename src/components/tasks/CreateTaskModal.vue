@@ -82,6 +82,52 @@
           </select>
         </div>
 
+        <!-- Custom fields -->
+        <div v-if="customFieldsStore.fields.length > 0" class="space-y-3">
+          <p class="label">Custom fields</p>
+          <div v-for="field in customFieldsStore.fields" :key="field.id">
+            <label class="label text-xs font-normal text-gray-500">{{ field.name }}</label>
+            <input
+              v-if="field.type === 'text'"
+              v-model="customFieldValues[field.id]"
+              type="text"
+              class="input-field"
+              placeholder="Empty"
+            />
+            <input
+              v-else-if="field.type === 'number'"
+              :value="customFieldValues[field.id] ?? ''"
+              type="number"
+              class="input-field"
+              placeholder="0"
+              @input="customFieldValues[field.id] = ($event.target as HTMLInputElement).value !== '' ? Number(($event.target as HTMLInputElement).value) : null"
+            />
+            <input
+              v-else-if="field.type === 'date'"
+              v-model="customFieldValues[field.id]"
+              type="date"
+              class="input-field"
+            />
+            <label v-else-if="field.type === 'checkbox'" class="flex items-center gap-2 cursor-pointer">
+              <input
+                :checked="!!(customFieldValues[field.id])"
+                type="checkbox"
+                class="w-4 h-4 rounded text-primary-600 focus:ring-primary-500"
+                @change="customFieldValues[field.id] = ($event.target as HTMLInputElement).checked"
+              />
+              <span class="text-sm text-gray-600">{{ customFieldValues[field.id] ? 'Yes' : 'No' }}</span>
+            </label>
+            <select
+              v-else-if="field.type === 'dropdown'"
+              v-model="customFieldValues[field.id]"
+              class="input-field"
+            >
+              <option value="">— Select —</option>
+              <option v-for="opt in field.options" :key="opt" :value="opt">{{ opt }}</option>
+            </select>
+          </div>
+        </div>
+
         <!-- Tags -->
         <div>
           <label class="label">Tags</label>
@@ -140,8 +186,8 @@
 import { ref, reactive, computed, nextTick, onMounted } from 'vue'
 import { useTasksStore } from '@/stores/tasks'
 import { useMembersStore } from '@/stores/members'
-import type { Task, TaskStatus, TaskPriority } from '@/types'
-// TaskStatus used for derivation inside handleSubmit only
+import { useCustomFieldsStore } from '@/stores/customFields'
+import type { Task, TaskStatus, TaskPriority, CustomFieldValue } from '@/types'
 
 const props = defineProps<{
   projectId: string
@@ -157,10 +203,12 @@ const emit = defineEmits<{
 
 const tasksStore = useTasksStore()
 const membersStore = useMembersStore()
+const customFieldsStore = useCustomFieldsStore()
 const titleInput = ref<HTMLInputElement | null>(null)
 const loading = ref(false)
 const error = ref<string | null>(null)
 const newTag = ref('')
+const customFieldValues = reactive<Record<string, CustomFieldValue>>({})
 
 const defaultSectionId = computed(() => {
   if (props.task?.sectionId) return props.task.sectionId
@@ -191,10 +239,15 @@ if (props.task?.dueDate) {
 onMounted(() => {
   nextTick(() => {
     titleInput.value?.focus()
-    // Set sectionId after sections are available
     form.sectionId = defaultSectionId.value
   })
   if (membersStore.members.length === 0) membersStore.fetchMembers()
+  // Ensure custom fields are loaded (no-op if already subscribed to same project)
+  customFieldsStore.subscribeToProject(props.projectId)
+  // Pre-fill values when editing
+  if (props.task?.customFieldValues) {
+    Object.assign(customFieldValues, props.task.customFieldValues)
+  }
 })
 
 function addTag() {
@@ -250,6 +303,12 @@ async function handleSubmit() {
         sectionId: form.sectionId || defaultSectionId.value,
         tags: form.tags
       })
+      // Save any custom field values that were filled in
+      for (const [fieldId, value] of Object.entries(customFieldValues)) {
+        if (value !== null && value !== '' && value !== undefined) {
+          await customFieldsStore.setTaskFieldValue(id, fieldId, value as CustomFieldValue)
+        }
+      }
       emit('saved', id)
     }
     emit('close')
