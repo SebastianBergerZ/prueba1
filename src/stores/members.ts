@@ -1,9 +1,8 @@
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import {
   collection,
   doc,
-  getDoc,
   getDocs,
   updateDoc,
   query,
@@ -13,7 +12,7 @@ import {
 } from 'firebase/firestore'
 import { db } from '@/firebase'
 import { useAuthStore } from './auth'
-import type { AppUser } from '@/types'
+import type { AppUser, MemberRole } from '@/types'
 
 export const useMembersStore = defineStore('members', () => {
   const members = ref<AppUser[]>([])
@@ -21,6 +20,16 @@ export const useMembersStore = defineStore('members', () => {
   const error = ref<string | null>(null)
 
   const authStore = useAuthStore()
+
+  const currentUserRole = computed<'owner' | MemberRole>(() => {
+    const ws = authStore.currentWorkspace
+    if (!ws || !authStore.uid) return 'member'
+    if (ws.ownerId === authStore.uid) return 'owner'
+    return ws.memberRoles?.[authStore.uid] ?? 'member'
+  })
+
+  const isViewer = computed(() => currentUserRole.value === 'viewer')
+  const canEdit = computed(() => !isViewer.value)
 
   async function fetchMembers(): Promise<void> {
     const workspace = authStore.currentWorkspace
@@ -34,7 +43,6 @@ export const useMembersStore = defineStore('members', () => {
         members.value = []
         return
       }
-      // Firestore 'in' supports up to 30 items
       const chunks: string[][] = []
       for (let i = 0; i < memberUids.length; i += 30) {
         chunks.push(memberUids.slice(i, i + 30))
@@ -60,7 +68,7 @@ export const useMembersStore = defineStore('members', () => {
     return snap.docs[0].data() as AppUser
   }
 
-  async function inviteMember(email: string): Promise<{ success: boolean; message: string }> {
+  async function inviteMember(email: string, role: MemberRole = 'member'): Promise<{ success: boolean; message: string }> {
     const workspace = authStore.currentWorkspace
     if (!workspace) return { success: false, message: 'No workspace found' }
 
@@ -79,16 +87,30 @@ export const useMembersStore = defineStore('members', () => {
     }
 
     await updateDoc(doc(db, 'workspaces', workspace.id), {
-      members: arrayUnion(found.uid)
+      members: arrayUnion(found.uid),
+      [`memberRoles.${found.uid}`]: role
     })
 
-    // Update local workspace state
     authStore.currentWorkspace!.members = [...workspace.members, found.uid]
+    if (!authStore.currentWorkspace!.memberRoles) authStore.currentWorkspace!.memberRoles = {}
+    authStore.currentWorkspace!.memberRoles[found.uid] = role
 
-    // Refresh members list
     await fetchMembers()
 
-    return { success: true, message: `${found.displayName} added to workspace!` }
+    return { success: true, message: `${found.displayName} added as ${role}!` }
+  }
+
+  async function updateMemberRole(memberUid: string, role: MemberRole): Promise<void> {
+    const workspace = authStore.currentWorkspace
+    if (!workspace) return
+    if (workspace.ownerId !== authStore.uid) throw new Error('Only the owner can change roles')
+
+    await updateDoc(doc(db, 'workspaces', workspace.id), {
+      [`memberRoles.${memberUid}`]: role
+    })
+
+    if (!authStore.currentWorkspace!.memberRoles) authStore.currentWorkspace!.memberRoles = {}
+    authStore.currentWorkspace!.memberRoles[memberUid] = role
   }
 
   async function removeMember(memberUid: string): Promise<void> {
@@ -99,16 +121,29 @@ export const useMembersStore = defineStore('members', () => {
     if (workspace.ownerId !== uid) throw new Error('Only the owner can remove members')
     if (memberUid === uid) throw new Error('You cannot remove yourself')
 
-    await updateDoc(doc(db, 'workspaces', workspace.id), {
-      members: arrayRemove(memberUid)
-    })
+    const roleUpdate: Record<string, any> = { members: arrayRemove(memberUid) }
+    if (workspace.memberRoles?.[memberUid]) {
+      roleUpdate[`memberRoles.${memberUid}`] = null
+    }
+
+    await updateDoc(doc(db, 'workspaces', workspace.id), roleUpdate)
 
     authStore.currentWorkspace!.members = workspace.members.filter((m) => m !== memberUid)
+    if (authStore.currentWorkspace!.memberRoles) {
+      delete authStore.currentWorkspace!.memberRoles[memberUid]
+    }
     members.value = members.value.filter((m) => m.uid !== memberUid)
   }
 
   function getMemberById(uid: string): AppUser | undefined {
     return members.value.find((m) => m.uid === uid)
+  }
+
+  function getMemberRole(uid: string): 'owner' | MemberRole {
+    const ws = authStore.currentWorkspace
+    if (!ws) return 'member'
+    if (ws.ownerId === uid) return 'owner'
+    return ws.memberRoles?.[uid] ?? 'member'
   }
 
   function getInitials(name: string): string {
@@ -119,11 +154,16 @@ export const useMembersStore = defineStore('members', () => {
     members,
     loading,
     error,
+    currentUserRole,
+    isViewer,
+    canEdit,
     fetchMembers,
     findUserByEmail,
     inviteMember,
+    updateMemberRole,
     removeMember,
     getMemberById,
+    getMemberRole,
     getInitials
   }
 })

@@ -43,13 +43,13 @@
             </button>
           </div>
 
-          <button @click="showEditProject = true" class="btn-secondary gap-2">
+          <button v-if="!isViewer" @click="showEditProject = true" class="btn-secondary gap-2">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
             </svg>
             Edit
           </button>
-          <button @click="showCreateTask = true" class="btn-primary gap-2">
+          <button v-if="!isViewer" @click="showCreateTask = true" class="btn-primary gap-2">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
             </svg>
@@ -89,15 +89,16 @@
               />
               <template v-else>
                 <h3
-                  class="text-sm font-semibold text-gray-700 cursor-pointer hover:text-primary-600 truncate"
-                  @click="startEditSection(col.section)"
-                  :title="'Click to rename'"
+                  class="text-sm font-semibold text-gray-700 truncate"
+                  :class="isViewer ? '' : 'cursor-pointer hover:text-primary-600'"
+                  @click="!isViewer && startEditSection(col.section)"
+                  :title="isViewer ? col.section.name : 'Click to rename'"
                 >{{ col.section.name }}</h3>
                 <span class="text-xs text-gray-400 font-normal flex-shrink-0">{{ col.tasks.length }}</span>
               </template>
             </div>
 
-            <div class="flex items-center gap-1 flex-shrink-0">
+            <div v-if="!isViewer" class="flex items-center gap-1 flex-shrink-0">
               <!-- Add task to column -->
               <button
                 @click="openCreateTaskInSection(col.section.id)"
@@ -133,6 +134,7 @@
             </TransitionGroup>
 
             <button
+              v-if="!isViewer"
               @click="openCreateTaskInSection(col.section.id)"
               class="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
             >
@@ -145,7 +147,7 @@
         </div>
 
         <!-- Add column button -->
-        <div class="flex-shrink-0 w-64">
+        <div v-if="!isViewer" class="flex-shrink-0 w-64">
           <button
             v-if="!addingSection"
             @click="addingSection = true"
@@ -225,7 +227,7 @@
 
           <div v-if="tasksStore.tasks.length === 0" class="flex flex-col items-center justify-center py-16 text-center">
             <p class="text-sm text-gray-500 mb-3">No tasks yet</p>
-            <button @click="showCreateTask = true" class="btn-primary text-sm">Add your first task</button>
+            <button v-if="!isViewer" @click="showCreateTask = true" class="btn-primary text-sm">Add your first task</button>
           </div>
         </div>
       </div>
@@ -257,6 +259,7 @@ import { useRoute } from 'vue-router'
 import { useProjectsStore } from '@/stores/projects'
 import { useTasksStore } from '@/stores/tasks'
 import { useCustomFieldsStore } from '@/stores/customFields'
+import { useMembersStore } from '@/stores/members'
 import TaskCard from '@/components/tasks/TaskCard.vue'
 import TaskRow from '@/components/tasks/TaskRow.vue'
 import CreateTaskModal from '@/components/tasks/CreateTaskModal.vue'
@@ -269,6 +272,8 @@ const route = useRoute()
 const projectsStore = useProjectsStore()
 const tasksStore = useTasksStore()
 const customFieldsStore = useCustomFieldsStore()
+const membersStore = useMembersStore()
+const isViewer = computed(() => membersStore.isViewer)
 
 const viewMode = ref<'board' | 'list'>('board')
 const showCreateTask = ref(false)

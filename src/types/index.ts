@@ -12,11 +12,14 @@ export interface AppUser {
 
 // ─── Workspace ───────────────────────────────────────────────────────────────
 
+export type MemberRole = 'member' | 'viewer'
+
 export interface Workspace {
   id: string
   name: string
   ownerId: string
   members: string[]
+  memberRoles?: Record<string, MemberRole>
   createdAt: Timestamp | Date
 }
 

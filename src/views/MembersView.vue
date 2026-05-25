@@ -8,11 +8,7 @@
           {{ membersStore.members.length }} member{{ membersStore.members.length === 1 ? '' : 's' }} in {{ workspaceName }}
         </p>
       </div>
-      <button
-        v-if="isOwner"
-        @click="showInvite = true"
-        class="btn-primary gap-2"
-      >
+      <button v-if="isOwner" @click="showInvite = true" class="btn-primary gap-2">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
         </svg>
@@ -40,42 +36,56 @@
       >
         <!-- Avatar -->
         <div class="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden bg-primary-500">
-          <img
-            v-if="member.photoURL"
-            :src="member.photoURL"
-            :alt="member.displayName"
-            class="w-full h-full object-cover"
-          />
-          <span v-else class="text-sm font-bold text-white">
-            {{ membersStore.getInitials(member.displayName) }}
-          </span>
+          <img v-if="member.photoURL" :src="member.photoURL" :alt="member.displayName" class="w-full h-full object-cover" />
+          <span v-else class="text-sm font-bold text-white">{{ membersStore.getInitials(member.displayName) }}</span>
         </div>
 
         <!-- Info -->
         <div class="flex-1 min-w-0">
-          <div class="flex items-center gap-2">
+          <div class="flex items-center gap-2 flex-wrap">
             <p class="text-sm font-medium text-gray-900 truncate">{{ member.displayName }}</p>
-            <span
-              v-if="member.uid === workspace?.ownerId"
-              class="text-xs px-2 py-0.5 bg-primary-50 text-primary-700 rounded-full font-medium"
-            >
-              Owner
-            </span>
-            <span
-              v-if="member.uid === authStore.uid"
-              class="text-xs px-2 py-0.5 bg-gray-100 text-gray-500 rounded-full"
-            >
-              You
-            </span>
+            <span v-if="member.uid === authStore.uid" class="text-xs px-2 py-0.5 bg-gray-100 text-gray-500 rounded-full">You</span>
           </div>
           <p class="text-xs text-gray-500 truncate">{{ member.email }}</p>
+        </div>
+
+        <!-- Role badge / selector -->
+        <div class="flex-shrink-0">
+          <!-- Owner badge (not changeable) -->
+          <span
+            v-if="member.uid === workspace?.ownerId"
+            class="text-xs px-2.5 py-1 bg-primary-50 text-primary-700 rounded-full font-medium"
+          >
+            Owner
+          </span>
+          <!-- Role selector for other members (owner only) -->
+          <select
+            v-else-if="isOwner"
+            :value="membersStore.getMemberRole(member.uid)"
+            @change="handleRoleChange(member.uid, ($event.target as HTMLSelectElement).value as any)"
+            class="text-xs border border-gray-200 rounded-full px-2.5 py-1 bg-white focus:outline-none focus:ring-1 focus:ring-primary-500 cursor-pointer"
+            :class="membersStore.getMemberRole(member.uid) === 'viewer' ? 'text-gray-500' : 'text-gray-700'"
+          >
+            <option value="member">Member</option>
+            <option value="viewer">Viewer</option>
+          </select>
+          <!-- Read-only badge for non-owners -->
+          <span
+            v-else
+            class="text-xs px-2.5 py-1 rounded-full font-medium"
+            :class="membersStore.getMemberRole(member.uid) === 'viewer'
+              ? 'bg-gray-100 text-gray-500'
+              : 'bg-green-50 text-green-700'"
+          >
+            {{ membersStore.getMemberRole(member.uid) === 'viewer' ? 'Viewer' : 'Member' }}
+          </span>
         </div>
 
         <!-- Remove button (owner only, not self) -->
         <button
           v-if="isOwner && member.uid !== authStore.uid"
           @click="handleRemove(member)"
-          class="p-1.5 rounded hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors"
+          class="p-1.5 rounded hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors flex-shrink-0"
           title="Remove member"
         >
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -108,7 +118,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useMembersStore } from '@/stores/members'
 import InviteMembersModal from '@/components/members/InviteMembersModal.vue'
-import type { AppUser } from '@/types'
+import type { AppUser, MemberRole } from '@/types'
 
 const authStore = useAuthStore()
 const membersStore = useMembersStore()
@@ -119,6 +129,14 @@ const workspaceName = computed(() => workspace.value?.name ?? 'Workspace')
 const isOwner = computed(() => workspace.value?.ownerId === authStore.uid)
 
 onMounted(() => membersStore.fetchMembers())
+
+async function handleRoleChange(memberUid: string, role: MemberRole) {
+  try {
+    await membersStore.updateMemberRole(memberUid, role)
+  } catch (err) {
+    alert(err instanceof Error ? err.message : 'Failed to update role')
+  }
+}
 
 async function handleRemove(member: AppUser) {
   if (!confirm(`Remove ${member.displayName} from the workspace?`)) return

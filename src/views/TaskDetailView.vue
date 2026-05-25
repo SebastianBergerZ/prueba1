@@ -30,13 +30,14 @@
       <div class="px-6 py-5 border-b border-gray-100">
         <div class="flex items-start justify-between gap-4">
           <div class="flex items-start gap-3 flex-1 min-w-0">
-            <!-- Complete button -->
+            <!-- Complete button (disabled for viewers) -->
             <button
-              @click="toggleComplete"
+              @click="!isViewer && toggleComplete()"
               class="mt-0.5 flex-shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors"
-              :class="task.status === 'done'
-                ? 'bg-green-500 border-green-500 text-white'
-                : 'border-gray-300 hover:border-green-400'"
+              :class="[
+                task.status === 'done' ? 'bg-green-500 border-green-500 text-white' : 'border-gray-300',
+                isViewer ? 'cursor-default' : 'hover:border-green-400'
+              ]"
             >
               <svg v-if="task.status === 'done'" class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />
@@ -44,9 +45,9 @@
             </button>
 
             <div class="flex-1 min-w-0">
-              <!-- Editable title -->
+              <!-- Editable title (not for viewers) -->
               <textarea
-                v-if="editing"
+                v-if="editing && !isViewer"
                 v-model="editForm.title"
                 class="w-full text-xl font-bold text-gray-900 border border-primary-300 rounded-md px-2 py-1 resize-none focus:outline-none focus:ring-2 focus:ring-primary-500"
                 rows="2"
@@ -55,16 +56,19 @@
               ></textarea>
               <h1
                 v-else
-                class="text-xl font-bold text-gray-900 cursor-pointer hover:bg-gray-50 rounded px-1 -mx-1"
-                :class="{ 'line-through text-gray-400': task.status === 'done' }"
-                @click="startEdit"
+                class="text-xl font-bold text-gray-900 rounded px-1 -mx-1"
+                :class="[
+                  { 'line-through text-gray-400': task.status === 'done' },
+                  isViewer ? '' : 'cursor-pointer hover:bg-gray-50'
+                ]"
+                @click="!isViewer && startEdit()"
               >
                 {{ task.title }}
               </h1>
             </div>
           </div>
 
-          <div class="flex items-center gap-2 flex-shrink-0">
+          <div v-if="!isViewer" class="flex items-center gap-2 flex-shrink-0">
             <button @click="showEditModal = true" class="btn-ghost text-xs">Edit</button>
             <button @click="handleDelete" class="btn-ghost text-xs text-red-600 hover:bg-red-50">Delete</button>
           </div>
@@ -78,8 +82,9 @@
           <p class="text-xs font-medium text-gray-500 mb-1">Status</p>
           <select
             :value="task.status"
+            :disabled="isViewer"
             @change="updateField('status', ($event.target as HTMLSelectElement).value)"
-            class="text-sm font-medium border border-gray-200 rounded-md px-2 py-1 focus:outline-none focus:ring-1 focus:ring-primary-500 bg-white"
+            class="text-sm font-medium border border-gray-200 rounded-md px-2 py-1 focus:outline-none focus:ring-1 focus:ring-primary-500 bg-white disabled:opacity-60 disabled:cursor-default"
           >
             <option value="todo">To Do</option>
             <option value="in_progress">In Progress</option>
@@ -93,8 +98,9 @@
           <p class="text-xs font-medium text-gray-500 mb-1">Priority</p>
           <select
             :value="task.priority"
+            :disabled="isViewer"
             @change="updateField('priority', ($event.target as HTMLSelectElement).value)"
-            class="text-sm font-medium border border-gray-200 rounded-md px-2 py-1 focus:outline-none focus:ring-1 focus:ring-primary-500 bg-white"
+            class="text-sm font-medium border border-gray-200 rounded-md px-2 py-1 focus:outline-none focus:ring-1 focus:ring-primary-500 bg-white disabled:opacity-60 disabled:cursor-default"
           >
             <option value="low">Low</option>
             <option value="medium">Medium</option>
@@ -109,8 +115,9 @@
           <input
             :value="startDateValue"
             type="date"
+            :disabled="isViewer"
             @change="updateStartDate(($event.target as HTMLInputElement).value)"
-            class="text-sm border border-gray-200 rounded-md px-2 py-1 focus:outline-none focus:ring-1 focus:ring-primary-500 bg-white"
+            class="text-sm border border-gray-200 rounded-md px-2 py-1 focus:outline-none focus:ring-1 focus:ring-primary-500 bg-white disabled:opacity-60 disabled:cursor-default"
           />
         </div>
 
@@ -120,8 +127,9 @@
           <input
             :value="dueDateValue"
             type="date"
+            :disabled="isViewer"
             @change="updateDueDate(($event.target as HTMLInputElement).value)"
-            class="text-sm border border-gray-200 rounded-md px-2 py-1 focus:outline-none focus:ring-1 focus:ring-primary-500 bg-white"
+            class="text-sm border border-gray-200 rounded-md px-2 py-1 focus:outline-none focus:ring-1 focus:ring-primary-500 bg-white disabled:opacity-60 disabled:cursor-default"
           />
         </div>
 
@@ -136,7 +144,7 @@
       <div class="px-6 py-4 border-b border-gray-100">
         <div class="flex items-center justify-between mb-3">
           <p class="text-xs font-medium text-gray-500">Custom fields</p>
-          <button @click="showAddField = !showAddField" class="text-xs text-primary-600 hover:text-primary-700 font-medium flex items-center gap-1">
+          <button v-if="!isViewer" @click="showAddField = !showAddField" class="text-xs text-primary-600 hover:text-primary-700 font-medium flex items-center gap-1">
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
             </svg>
@@ -160,7 +168,7 @@
                   @blur="saveFieldName(field.id)"
                 />
                 <span class="text-xs text-gray-300 bg-gray-100 px-1.5 rounded capitalize">{{ field.type }}</span>
-                <div class="opacity-0 group-hover/field:opacity-100 flex items-center gap-1 ml-auto">
+                <div v-if="!isViewer" class="opacity-0 group-hover/field:opacity-100 flex items-center gap-1 ml-auto">
                   <button @click="startEditField(field)" class="p-0.5 text-gray-400 hover:text-gray-600" title="Rename field">
                     <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
                   </button>
@@ -176,8 +184,9 @@
                   :value="(task.customFieldValues?.[field.id] as string) ?? ''"
                   type="text"
                   placeholder="Empty"
-                  class="input-field text-sm py-1.5"
-                  @blur="setFieldValue(field.id, ($event.target as HTMLInputElement).value || null)"
+                  :disabled="isViewer"
+                  class="input-field text-sm py-1.5 disabled:opacity-60 disabled:cursor-default"
+                  @blur="!isViewer && setFieldValue(field.id, ($event.target as HTMLInputElement).value || null)"
                 />
               </template>
               <template v-else-if="field.type === 'number'">
@@ -185,25 +194,28 @@
                   :value="(task.customFieldValues?.[field.id] as number) ?? ''"
                   type="number"
                   placeholder="0"
-                  class="input-field text-sm py-1.5 w-40"
-                  @blur="setFieldValue(field.id, ($event.target as HTMLInputElement).value !== '' ? Number(($event.target as HTMLInputElement).value) : null)"
+                  :disabled="isViewer"
+                  class="input-field text-sm py-1.5 w-40 disabled:opacity-60 disabled:cursor-default"
+                  @blur="!isViewer && setFieldValue(field.id, ($event.target as HTMLInputElement).value !== '' ? Number(($event.target as HTMLInputElement).value) : null)"
                 />
               </template>
               <template v-else-if="field.type === 'date'">
                 <input
                   :value="(task.customFieldValues?.[field.id] as string) ?? ''"
                   type="date"
-                  class="input-field text-sm py-1.5 w-48"
-                  @change="setFieldValue(field.id, ($event.target as HTMLInputElement).value || null)"
+                  :disabled="isViewer"
+                  class="input-field text-sm py-1.5 w-48 disabled:opacity-60 disabled:cursor-default"
+                  @change="!isViewer && setFieldValue(field.id, ($event.target as HTMLInputElement).value || null)"
                 />
               </template>
               <template v-else-if="field.type === 'checkbox'">
-                <label class="flex items-center gap-2 cursor-pointer">
+                <label class="flex items-center gap-2" :class="isViewer ? 'cursor-default' : 'cursor-pointer'">
                   <input
                     :checked="!!(task.customFieldValues?.[field.id])"
                     type="checkbox"
-                    class="w-4 h-4 rounded text-primary-600 focus:ring-primary-500"
-                    @change="setFieldValue(field.id, ($event.target as HTMLInputElement).checked)"
+                    :disabled="isViewer"
+                    class="w-4 h-4 rounded text-primary-600 focus:ring-primary-500 disabled:opacity-60"
+                    @change="!isViewer && setFieldValue(field.id, ($event.target as HTMLInputElement).checked)"
                   />
                   <span class="text-sm text-gray-600">{{ task.customFieldValues?.[field.id] ? 'Yes' : 'No' }}</span>
                 </label>
@@ -211,8 +223,9 @@
               <template v-else-if="field.type === 'dropdown'">
                 <select
                   :value="(task.customFieldValues?.[field.id] as string) ?? ''"
-                  class="input-field text-sm py-1.5"
-                  @change="setFieldValue(field.id, ($event.target as HTMLSelectElement).value || null)"
+                  :disabled="isViewer"
+                  class="input-field text-sm py-1.5 disabled:opacity-60 disabled:cursor-default"
+                  @change="!isViewer && setFieldValue(field.id, ($event.target as HTMLSelectElement).value || null)"
                 >
                   <option value="">— Select —</option>
                   <option v-for="opt in field.options" :key="opt" :value="opt">{{ opt }}</option>
@@ -270,14 +283,14 @@
             class="inline-flex items-center gap-1 px-2.5 py-1 bg-primary-50 text-primary-700 text-xs rounded-md font-medium"
           >
             {{ tag }}
-            <button @click="removeTag(tag)" class="hover:text-primary-900 transition-colors">
+            <button v-if="!isViewer" @click="removeTag(tag)" class="hover:text-primary-900 transition-colors">
               <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
           </span>
         </div>
-        <div class="flex gap-2">
+        <div v-if="!isViewer" class="flex gap-2">
           <input v-model="newTag" type="text" placeholder="Add tag..." class="input-field flex-1 text-xs py-1.5" @keydown.enter.prevent="addTag" maxlength="30" />
           <button @click="addTag" class="btn-secondary text-xs px-3 py-1.5">Add</button>
         </div>
@@ -289,7 +302,8 @@
         <textarea
           v-model="descriptionValue"
           placeholder="Add a description..."
-          class="w-full text-sm text-gray-700 border border-transparent rounded-md px-2 py-1.5 resize-none focus:outline-none focus:border-gray-300 focus:bg-gray-50 hover:bg-gray-50/50 transition-colors min-h-24"
+          :disabled="isViewer"
+          class="w-full text-sm text-gray-700 border border-transparent rounded-md px-2 py-1.5 resize-none focus:outline-none focus:border-gray-300 focus:bg-gray-50 hover:bg-gray-50/50 transition-colors min-h-24 disabled:opacity-70 disabled:cursor-default disabled:hover:bg-transparent"
           rows="5"
           @blur="saveDescription"
         ></textarea>
@@ -315,6 +329,7 @@ import { useTasksStore } from '@/stores/tasks'
 import { useProjectsStore } from '@/stores/projects'
 import { useAuthStore } from '@/stores/auth'
 import { useCustomFieldsStore } from '@/stores/customFields'
+import { useMembersStore } from '@/stores/members'
 import CreateTaskModal from '@/components/tasks/CreateTaskModal.vue'
 import type { TaskStatus, TaskPriority, CustomField, CustomFieldType, CustomFieldValue } from '@/types'
 
@@ -324,6 +339,8 @@ const tasksStore = useTasksStore()
 const projectsStore = useProjectsStore()
 const authStore = useAuthStore()
 const customFieldsStore = useCustomFieldsStore()
+const membersStore = useMembersStore()
+const isViewer = computed(() => membersStore.isViewer)
 
 const loading = ref(false)
 const showEditModal = ref(false)

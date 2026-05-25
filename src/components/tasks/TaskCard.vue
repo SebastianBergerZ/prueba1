@@ -65,8 +65,8 @@
       </div>
     </div>
 
-    <!-- Move buttons (shown on hover) -->
-    <div v-if="otherSections.length" class="hidden group-hover:flex items-center gap-1 mt-2 pt-2 border-t border-gray-100 flex-wrap">
+    <!-- Move buttons (shown on hover, hidden for viewers) -->
+    <div v-if="!isViewer && otherSections.length" class="hidden group-hover:flex items-center gap-1 mt-2 pt-2 border-t border-gray-100 flex-wrap">
       <span class="text-xs text-gray-400 mr-1">Move to:</span>
       <button
         v-for="s in otherSections"
@@ -90,6 +90,7 @@ const props = defineProps<{ task: Task }>()
 const emit = defineEmits<{ move: [taskId: string, sectionId: string] }>()
 
 const membersStore = useMembersStore()
+const isViewer = computed(() => membersStore.isViewer)
 const tasksStore = useTasksStore()
 const assignee = computed(() => props.task.assigneeId ? membersStore.getMemberById(props.task.assigneeId) : null)
 const otherSections = computed(() => tasksStore.sections.filter((s) => s.id !== props.task.sectionId))
