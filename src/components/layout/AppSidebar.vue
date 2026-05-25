@@ -1,6 +1,6 @@
 <template>
   <aside
-    class="flex flex-col min-h-screen bg-asana-sidebar text-white flex-shrink-0 overflow-hidden transition-all duration-300 ease-in-out"
+    class="flex flex-col min-h-screen bg-taskflow-sidebar text-white flex-shrink-0 overflow-hidden transition-all duration-300 ease-in-out"
     :class="collapsed ? 'w-16' : 'w-64'"
   >
     <!-- Header: logo + collapse button -->
@@ -40,8 +40,8 @@
         v-for="item in mainNav"
         :key="item.to"
         :to="item.to"
-        class="flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors text-white/70 hover:bg-asana-sidebar-hover hover:text-white"
-        active-class="!bg-asana-sidebar-active !text-white"
+        class="flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors text-white/70 hover:bg-taskflow-sidebar-hover hover:text-white"
+        active-class="!bg-taskflow-sidebar-active !text-white"
         :title="item.label"
       >
         <component :is="item.icon" class="w-4 h-4 flex-shrink-0" />
@@ -65,8 +65,8 @@
         v-for="project in projectsStore.projects"
         :key="project.id"
         :to="`/project/${project.id}`"
-        class="flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors text-white/70 hover:bg-asana-sidebar-hover hover:text-white"
-        active-class="!bg-asana-sidebar-active !text-white"
+        class="flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors text-white/70 hover:bg-taskflow-sidebar-hover hover:text-white"
+        active-class="!bg-taskflow-sidebar-active !text-white"
         :title="project.name"
       >
         <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" :class="getProjectDotClass(project.color)"></span>
@@ -77,7 +77,7 @@
       <button
         v-if="!collapsed"
         @click="$emit('create-project')"
-        class="flex items-center gap-3 px-3 py-2 rounded-md text-sm text-white/50 hover:bg-asana-sidebar-hover hover:text-white transition-colors w-full text-left"
+        class="flex items-center gap-3 px-3 py-2 rounded-md text-sm text-white/50 hover:bg-taskflow-sidebar-hover hover:text-white transition-colors w-full text-left"
       >
         <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
