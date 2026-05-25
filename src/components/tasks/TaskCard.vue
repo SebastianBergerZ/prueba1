@@ -34,15 +34,24 @@
 
     <!-- Footer -->
     <div class="flex items-center justify-between mt-2 pt-2 border-t border-gray-50">
-      <!-- Due date -->
-      <div v-if="task.dueDate" class="flex items-center gap-1" :class="dueDateClass">
-        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-            d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-        </svg>
-        <span class="text-xs">{{ formattedDueDate }}</span>
+      <!-- Dates -->
+      <div class="flex items-center gap-2">
+        <div v-if="task.startDate" class="flex items-center gap-1 text-gray-400" :title="'Start: ' + formattedStartDate">
+          <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+          </svg>
+          <span class="text-xs">{{ formattedStartDate }}</span>
+        </div>
+        <span v-if="task.startDate && task.dueDate" class="text-xs text-gray-300">→</span>
+        <div v-if="task.dueDate" class="flex items-center gap-1" :class="dueDateClass">
+          <svg v-if="!task.startDate" class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+          </svg>
+          <span class="text-xs">{{ formattedDueDate }}</span>
+        </div>
       </div>
-      <span v-else></span>
+      <span v-if="!task.startDate && !task.dueDate"></span>
 
       <!-- Assignee avatar -->
       <div
@@ -103,6 +112,13 @@ const priorityLabel = computed(() => {
     low: 'Low'
   }
   return map[props.task.priority] ?? props.task.priority
+})
+
+const formattedStartDate = computed(() => {
+  if (!props.task.startDate) return ''
+  const d = props.task.startDate
+  const date = 'toDate' in d ? (d as any).toDate() : new Date(d as any)
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 })
 
 const formattedDueDate = computed(() => {

@@ -59,14 +59,16 @@
           </div>
         </div>
 
-        <!-- Due date -->
-        <div>
-          <label class="label">Due date</label>
-          <input
-            v-model="form.dueDateStr"
-            type="date"
-            class="input-field"
-          />
+        <!-- Dates row -->
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="label">Start date</label>
+            <input v-model="form.startDateStr" type="date" class="input-field" />
+          </div>
+          <div>
+            <label class="label">Due date</label>
+            <input v-model="form.dueDateStr" type="date" class="input-field" />
+          </div>
         </div>
 
         <!-- Assignee -->
@@ -172,15 +174,18 @@ const form = reactive({
   sectionId: '' as string,
   priority: (props.task?.priority ?? 'medium') as TaskPriority,
   assigneeId: props.task?.assigneeId ?? null as string | null,
+  startDateStr: '',
   dueDateStr: '',
   tags: [...(props.task?.tags ?? [])]
 })
 
-// Pre-fill due date string
+if (props.task?.startDate) {
+  const d = props.task.startDate
+  form.startDateStr = ('toDate' in d ? (d as any).toDate() : new Date(d as any)).toISOString().split('T')[0]
+}
 if (props.task?.dueDate) {
   const d = props.task.dueDate
-  const date = 'toDate' in d ? (d as any).toDate() : new Date(d as any)
-  form.dueDateStr = date.toISOString().split('T')[0]
+  form.dueDateStr = ('toDate' in d ? (d as any).toDate() : new Date(d as any)).toISOString().split('T')[0]
 }
 
 onMounted(() => {
@@ -210,6 +215,7 @@ async function handleSubmit() {
   error.value = null
 
   try {
+    const startDate = form.startDateStr ? new Date(form.startDateStr + 'T00:00:00') : null
     const dueDate = form.dueDateStr ? new Date(form.dueDateStr + 'T00:00:00') : null
 
     if (props.task) {
@@ -237,6 +243,7 @@ async function handleSubmit() {
         projectId: props.projectId,
         workspaceId: props.workspaceId,
         assigneeId: form.assigneeId,
+        startDate,
         dueDate,
         priority: form.priority,
         status,

@@ -62,6 +62,7 @@ export interface Task {
   projectId: string
   workspaceId: string
   assigneeId: string | null
+  startDate: Timestamp | Date | null
   dueDate: Timestamp | Date | null
   priority: TaskPriority
   status: TaskStatus
@@ -102,6 +103,7 @@ export interface CreateTaskPayload {
   projectId: string
   workspaceId: string
   assigneeId: string | null
+  startDate: Date | null
   dueDate: Date | null
   priority: TaskPriority
   status: TaskStatus

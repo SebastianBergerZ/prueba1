@@ -144,6 +144,7 @@ export const useTasksStore = defineStore('tasks', () => {
       projectId: payload.projectId,
       workspaceId: payload.workspaceId,
       assigneeId: payload.assigneeId,
+      startDate: payload.startDate ?? null,
       dueDate: payload.dueDate,
       priority: payload.priority,
       status: payload.status,

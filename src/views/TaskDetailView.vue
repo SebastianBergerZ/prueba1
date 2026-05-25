@@ -103,6 +103,17 @@
           </select>
         </div>
 
+        <!-- Start date -->
+        <div>
+          <p class="text-xs font-medium text-gray-500 mb-1">Start date</p>
+          <input
+            :value="startDateValue"
+            type="date"
+            @change="updateStartDate(($event.target as HTMLInputElement).value)"
+            class="text-sm border border-gray-200 rounded-md px-2 py-1 focus:outline-none focus:ring-1 focus:ring-primary-500 bg-white"
+          />
+        </div>
+
         <!-- Due date -->
         <div>
           <p class="text-xs font-medium text-gray-500 mb-1">Due date</p>
@@ -218,11 +229,16 @@ onMounted(() => {
   }
 })
 
+const startDateValue = computed(() => {
+  if (!task.value?.startDate) return ''
+  const d = task.value.startDate
+  return ('toDate' in d ? (d as any).toDate() : new Date(d as any)).toISOString().split('T')[0]
+})
+
 const dueDateValue = computed(() => {
   if (!task.value?.dueDate) return ''
   const d = task.value.dueDate
-  const date = 'toDate' in d ? (d as any).toDate() : new Date(d as any)
-  return date.toISOString().split('T')[0]
+  return ('toDate' in d ? (d as any).toDate() : new Date(d as any)).toISOString().split('T')[0]
 })
 
 const formattedCreatedAt = computed(() => {
@@ -263,10 +279,14 @@ async function updateField(field: 'status' | 'priority', value: string) {
   await tasksStore.updateTask({ id: task.value.id, [field]: value as TaskStatus | TaskPriority })
 }
 
+async function updateStartDate(value: string) {
+  if (!task.value) return
+  await tasksStore.updateTask({ id: task.value.id, startDate: value ? new Date(value + 'T00:00:00') : null })
+}
+
 async function updateDueDate(value: string) {
   if (!task.value) return
-  const dueDate = value ? new Date(value + 'T00:00:00') : null
-  await tasksStore.updateTask({ id: task.value.id, dueDate })
+  await tasksStore.updateTask({ id: task.value.id, dueDate: value ? new Date(value + 'T00:00:00') : null })
 }
 
 async function addTag() {
