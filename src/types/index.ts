@@ -69,9 +69,26 @@ export interface Task {
   sectionId: string
   order: number
   tags: string[]
+  customFieldValues: Record<string, CustomFieldValue>
   createdAt: Timestamp | Date
   updatedAt: Timestamp | Date
 }
+
+// ─── Custom Fields ────────────────────────────────────────────────────────────
+
+export type CustomFieldType = 'text' | 'number' | 'date' | 'dropdown' | 'checkbox'
+
+export interface CustomField {
+  id: string
+  projectId: string
+  name: string
+  type: CustomFieldType
+  options: string[]   // used for dropdown
+  order: number
+  createdAt: Timestamp | Date
+}
+
+export type CustomFieldValue = string | number | boolean | null
 
 // ─── UI Helpers ──────────────────────────────────────────────────────────────
 

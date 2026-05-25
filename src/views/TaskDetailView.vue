@@ -132,6 +132,133 @@
         </div>
       </div>
 
+      <!-- Custom fields -->
+      <div class="px-6 py-4 border-b border-gray-100">
+        <div class="flex items-center justify-between mb-3">
+          <p class="text-xs font-medium text-gray-500">Custom fields</p>
+          <button @click="showAddField = !showAddField" class="text-xs text-primary-600 hover:text-primary-700 font-medium flex items-center gap-1">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+            </svg>
+            Add field
+          </button>
+        </div>
+
+        <!-- Existing custom fields -->
+        <div class="space-y-3">
+          <div v-for="field in customFieldsStore.fields" :key="field.id" class="flex items-start gap-3 group/field">
+            <div class="flex-1">
+              <!-- Field header with edit/delete -->
+              <div class="flex items-center gap-2 mb-1">
+                <span v-if="editingFieldId !== field.id" class="text-xs font-medium text-gray-500 cursor-pointer hover:text-primary-600" @click="startEditField(field)">{{ field.name }}</span>
+                <input
+                  v-else
+                  v-model="editingFieldName"
+                  class="text-xs font-medium border border-primary-400 rounded px-1 focus:outline-none"
+                  @keydown.enter="saveFieldName(field.id)"
+                  @keydown.escape="editingFieldId = null"
+                  @blur="saveFieldName(field.id)"
+                />
+                <span class="text-xs text-gray-300 bg-gray-100 px-1.5 rounded capitalize">{{ field.type }}</span>
+                <div class="opacity-0 group-hover/field:opacity-100 flex items-center gap-1 ml-auto">
+                  <button @click="startEditField(field)" class="p-0.5 text-gray-400 hover:text-gray-600" title="Rename field">
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                  </button>
+                  <button @click="handleDeleteField(field.id)" class="p-0.5 text-gray-400 hover:text-red-500" title="Delete field">
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Field value editor -->
+              <template v-if="field.type === 'text'">
+                <input
+                  :value="(task.customFieldValues?.[field.id] as string) ?? ''"
+                  type="text"
+                  placeholder="Empty"
+                  class="input-field text-sm py-1.5"
+                  @blur="setFieldValue(field.id, ($event.target as HTMLInputElement).value || null)"
+                />
+              </template>
+              <template v-else-if="field.type === 'number'">
+                <input
+                  :value="(task.customFieldValues?.[field.id] as number) ?? ''"
+                  type="number"
+                  placeholder="0"
+                  class="input-field text-sm py-1.5 w-40"
+                  @blur="setFieldValue(field.id, ($event.target as HTMLInputElement).value !== '' ? Number(($event.target as HTMLInputElement).value) : null)"
+                />
+              </template>
+              <template v-else-if="field.type === 'date'">
+                <input
+                  :value="(task.customFieldValues?.[field.id] as string) ?? ''"
+                  type="date"
+                  class="input-field text-sm py-1.5 w-48"
+                  @change="setFieldValue(field.id, ($event.target as HTMLInputElement).value || null)"
+                />
+              </template>
+              <template v-else-if="field.type === 'checkbox'">
+                <label class="flex items-center gap-2 cursor-pointer">
+                  <input
+                    :checked="!!(task.customFieldValues?.[field.id])"
+                    type="checkbox"
+                    class="w-4 h-4 rounded text-primary-600 focus:ring-primary-500"
+                    @change="setFieldValue(field.id, ($event.target as HTMLInputElement).checked)"
+                  />
+                  <span class="text-sm text-gray-600">{{ task.customFieldValues?.[field.id] ? 'Yes' : 'No' }}</span>
+                </label>
+              </template>
+              <template v-else-if="field.type === 'dropdown'">
+                <select
+                  :value="(task.customFieldValues?.[field.id] as string) ?? ''"
+                  class="input-field text-sm py-1.5"
+                  @change="setFieldValue(field.id, ($event.target as HTMLSelectElement).value || null)"
+                >
+                  <option value="">— Select —</option>
+                  <option v-for="opt in field.options" :key="opt" :value="opt">{{ opt }}</option>
+                </select>
+              </template>
+            </div>
+          </div>
+
+          <!-- No fields yet -->
+          <p v-if="customFieldsStore.fields.length === 0 && !showAddField" class="text-xs text-gray-400 italic">No custom fields yet</p>
+        </div>
+
+        <!-- Add field form -->
+        <div v-if="showAddField" class="mt-4 border border-gray-200 rounded-lg p-4 space-y-3 bg-gray-50">
+          <p class="text-xs font-semibold text-gray-700">New field</p>
+          <div>
+            <label class="label">Field name</label>
+            <input v-model="newField.name" type="text" placeholder="e.g. Budget, Effort, Link..." class="input-field" maxlength="50" />
+          </div>
+          <div>
+            <label class="label">Type</label>
+            <select v-model="newField.type" class="input-field">
+              <option value="text">Text</option>
+              <option value="number">Number</option>
+              <option value="date">Date</option>
+              <option value="checkbox">Checkbox</option>
+              <option value="dropdown">Dropdown</option>
+            </select>
+          </div>
+          <!-- Dropdown options -->
+          <div v-if="newField.type === 'dropdown'">
+            <label class="label">Options <span class="text-gray-400 font-normal">(one per line)</span></label>
+            <textarea
+              v-model="newField.optionsRaw"
+              class="input-field resize-none text-sm"
+              rows="3"
+              placeholder="Option A&#10;Option B&#10;Option C"
+            ></textarea>
+          </div>
+          <div class="flex gap-2">
+            <button @click="handleCreateField" class="btn-primary text-xs px-3 py-1.5" :disabled="!newField.name.trim()">Create field</button>
+            <button @click="showAddField = false" class="btn-secondary text-xs px-3 py-1.5">Cancel</button>
+          </div>
+        </div>
+      </div>
+
       <!-- Tags -->
       <div class="px-6 py-4 border-b border-gray-100">
         <p class="text-xs font-medium text-gray-500 mb-2">Tags</p>
@@ -150,14 +277,7 @@
           </span>
         </div>
         <div class="flex gap-2">
-          <input
-            v-model="newTag"
-            type="text"
-            placeholder="Add tag..."
-            class="input-field flex-1 text-xs py-1.5"
-            @keydown.enter.prevent="addTag"
-            maxlength="30"
-          />
+          <input v-model="newTag" type="text" placeholder="Add tag..." class="input-field flex-1 text-xs py-1.5" @keydown.enter.prevent="addTag" maxlength="30" />
           <button @click="addTag" class="btn-secondary text-xs px-3 py-1.5">Add</button>
         </div>
       </div>
@@ -188,19 +308,21 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch, reactive, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useTasksStore } from '@/stores/tasks'
 import { useProjectsStore } from '@/stores/projects'
 import { useAuthStore } from '@/stores/auth'
+import { useCustomFieldsStore } from '@/stores/customFields'
 import CreateTaskModal from '@/components/tasks/CreateTaskModal.vue'
-import type { TaskStatus, TaskPriority } from '@/types'
+import type { TaskStatus, TaskPriority, CustomField, CustomFieldType, CustomFieldValue } from '@/types'
 
 const props = defineProps<{ projectId: string; taskId: string }>()
 const router = useRouter()
 const tasksStore = useTasksStore()
 const projectsStore = useProjectsStore()
 const authStore = useAuthStore()
+const customFieldsStore = useCustomFieldsStore()
 
 const loading = ref(false)
 const showEditModal = ref(false)
@@ -208,6 +330,11 @@ const editing = ref(false)
 const newTag = ref('')
 const editForm = ref({ title: '' })
 const descriptionValue = ref('')
+
+const showAddField = ref(false)
+const editingFieldId = ref<string | null>(null)
+const editingFieldName = ref('')
+const newField = reactive({ name: '', type: 'text' as CustomFieldType, optionsRaw: '' })
 
 const task = computed(() => tasksStore.getTaskById(props.taskId))
 
@@ -227,7 +354,48 @@ onMounted(() => {
   if (workspaceId && projectsStore.projects.length === 0) {
     projectsStore.subscribeToProjects(workspaceId)
   }
+  customFieldsStore.subscribeToProject(props.projectId)
 })
+
+onUnmounted(() => {
+  customFieldsStore.unsubscribeFromProject()
+})
+
+function startEditField(field: CustomField) {
+  editingFieldId.value = field.id
+  editingFieldName.value = field.name
+}
+
+async function saveFieldName(id: string) {
+  const name = editingFieldName.value.trim()
+  if (name && name !== customFieldsStore.fields.find((f) => f.id === id)?.name) {
+    await customFieldsStore.updateField(id, { name })
+  }
+  editingFieldId.value = null
+}
+
+async function handleDeleteField(id: string) {
+  if (!confirm('Delete this custom field? Values stored on tasks will remain but will no longer be visible.')) return
+  await customFieldsStore.deleteField(id)
+}
+
+async function setFieldValue(fieldId: string, value: CustomFieldValue) {
+  if (!task.value) return
+  await customFieldsStore.setTaskFieldValue(task.value.id, fieldId, value)
+}
+
+async function handleCreateField() {
+  const name = newField.name.trim()
+  if (!name) return
+  const options = newField.type === 'dropdown'
+    ? newField.optionsRaw.split('\n').map((o) => o.trim()).filter(Boolean)
+    : []
+  await customFieldsStore.createField(props.projectId, name, newField.type, options)
+  newField.name = ''
+  newField.type = 'text'
+  newField.optionsRaw = ''
+  showAddField.value = false
+}
 
 const startDateValue = computed(() => {
   if (!task.value?.startDate) return ''

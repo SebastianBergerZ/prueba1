@@ -256,6 +256,7 @@ import { ref, computed, nextTick, onUnmounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useProjectsStore } from '@/stores/projects'
 import { useTasksStore } from '@/stores/tasks'
+import { useCustomFieldsStore } from '@/stores/customFields'
 import TaskCard from '@/components/tasks/TaskCard.vue'
 import TaskRow from '@/components/tasks/TaskRow.vue'
 import CreateTaskModal from '@/components/tasks/CreateTaskModal.vue'
@@ -267,6 +268,7 @@ const props = defineProps<{ id: string }>()
 const route = useRoute()
 const projectsStore = useProjectsStore()
 const tasksStore = useTasksStore()
+const customFieldsStore = useCustomFieldsStore()
 
 const viewMode = ref<'board' | 'list'>('board')
 const showCreateTask = ref(false)
@@ -352,6 +354,7 @@ function handleTaskSaved() {
 // Subscribe when project changes
 watch(() => props.id, (newId) => {
   tasksStore.subscribeToProject(newId)
+  customFieldsStore.subscribeToProject(newId)
   editingSectionId.value = null
   addingSection.value = false
 }, { immediate: true })
@@ -362,6 +365,7 @@ watch(addingSection, (val) => {
 
 onUnmounted(() => {
   tasksStore.unsubscribeFromProject()
+  customFieldsStore.unsubscribeFromProject()
 })
 </script>
 
