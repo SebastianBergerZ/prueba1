@@ -109,6 +109,22 @@
           </select>
         </div>
 
+        <!-- Assignee -->
+        <div>
+          <p class="text-xs font-medium text-gray-500 mb-1">Assignee</p>
+          <select
+            :value="task.assigneeId ?? ''"
+            :disabled="isViewer"
+            @change="updateAssignee(($event.target as HTMLSelectElement).value)"
+            class="text-sm font-medium border border-gray-200 rounded-md px-2 py-1 focus:outline-none focus:ring-1 focus:ring-primary-500 bg-white disabled:opacity-60 disabled:cursor-default"
+          >
+            <option value="">— Unassigned —</option>
+            <option v-for="member in membersStore.members" :key="member.uid" :value="member.uid">
+              {{ member.displayName }}
+            </option>
+          </select>
+        </div>
+
         <!-- Start date -->
         <div>
           <p class="text-xs font-medium text-gray-500 mb-1">Start date</p>
@@ -461,6 +477,7 @@ onMounted(() => {
   }
   customFieldsStore.subscribeToProject(props.projectId)
   commentsStore.subscribeToTask(props.taskId)
+  if (membersStore.members.length === 0) membersStore.fetchMembers()
 })
 
 function startEditField(field: CustomField) {
@@ -552,6 +569,11 @@ async function toggleComplete() {
 async function updateField(field: 'status' | 'priority', value: string) {
   if (!task.value) return
   await tasksStore.updateTask({ id: task.value.id, [field]: value as TaskStatus | TaskPriority })
+}
+
+async function updateAssignee(value: string) {
+  if (!task.value) return
+  await tasksStore.updateTask({ id: task.value.id, assigneeId: value || null })
 }
 
 async function updateStartDate(value: string) {
