@@ -199,8 +199,8 @@
       </div>
 
       <!-- List view -->
-      <div v-else-if="viewMode === 'list'" class="flex-1 overflow-y-auto min-h-0 p-6 max-w-5xl">
-        <div v-if="tasksStore.loading" class="card">
+      <div v-else-if="viewMode === 'list'" class="flex-1 overflow-auto min-h-0 p-6">
+        <div v-if="tasksStore.loading" class="card min-w-max">
           <div v-for="i in 5" :key="i" class="flex items-center gap-3 px-4 py-3 border-b border-gray-100">
             <div class="w-5 h-5 rounded-full bg-gray-200 animate-pulse"></div>
             <div class="h-4 flex-1 bg-gray-200 rounded animate-pulse"></div>
@@ -208,14 +208,25 @@
           </div>
         </div>
 
-        <div v-else class="card overflow-hidden">
-          <div class="flex items-center gap-3 px-4 py-2 bg-gray-50 border-b border-gray-200">
-            <span class="w-5 flex-shrink-0"></span>
-            <span class="flex-1 text-xs font-semibold text-gray-500 uppercase tracking-wider">Task</span>
-            <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider hidden sm:block w-24">Column</span>
-            <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider hidden md:block w-20">Priority</span>
-            <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider w-20">Due</span>
-            <span class="w-20 flex-shrink-0"></span>
+        <div v-else class="card overflow-hidden min-w-max">
+          <!-- Column headers -->
+          <div class="flex items-center px-4 py-2 bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-500 uppercase tracking-wider select-none sticky top-0 z-10">
+            <div class="w-10 flex-shrink-0"></div>
+            <div class="flex-1 min-w-48 pr-4">Task</div>
+            <div class="w-24 flex-shrink-0 pr-3">Status</div>
+            <div class="w-28 flex-shrink-0 pr-3">Assignee</div>
+            <div class="w-28 flex-shrink-0 pr-3">Section</div>
+            <div class="w-24 flex-shrink-0 pr-3">Start</div>
+            <div class="w-24 flex-shrink-0 pr-3">Due</div>
+            <div class="w-20 flex-shrink-0 pr-3">Priority</div>
+            <div class="w-36 flex-shrink-0 pr-3">Tags</div>
+            <div class="w-44 flex-shrink-0 pr-3">Description</div>
+            <div
+              v-for="field in customFieldsStore.fields"
+              :key="field.id"
+              class="w-28 flex-shrink-0 pr-3 truncate"
+            >{{ field.name }}</div>
+            <div class="w-12 flex-shrink-0"></div>
           </div>
 
           <template v-for="col in tasksStore.sectionColumns" :key="col.section.id">
