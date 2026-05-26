@@ -33,77 +33,168 @@
         <p class="text-sm text-gray-400">No tasks yet — add tasks to see your dashboard.</p>
       </div>
 
-      <!-- Charts grid -->
+      <!-- Charts -->
       <div v-else class="grid grid-cols-1 lg:grid-cols-2 gap-4">
 
-        <!-- Donut: by completion status -->
+        <!-- ── 1. Donut: by status ─────────────────────────────────────── -->
         <div class="card p-5">
-          <h3 class="text-sm font-semibold text-gray-700 mb-4">Total Tasks by Completion Status</h3>
-          <div class="h-52">
-            <Doughnut :data="donutData" :options="donutOptions" />
+          <h3 class="text-sm font-semibold text-gray-700 mb-4">Tasks by Completion Status</h3>
+          <div class="flex items-center gap-6">
+            <svg width="120" height="120" viewBox="0 0 120 120" class="flex-shrink-0">
+              <circle cx="60" cy="60" r="52" fill="#f9fafb" />
+              <path v-for="seg in donutSegments" :key="seg.label" :d="seg.path" :fill="seg.color" />
+              <circle cx="60" cy="60" r="33" fill="white" />
+              <text x="60" y="55" text-anchor="middle" font-size="18" font-weight="700" fill="#111827">{{ total }}</text>
+              <text x="60" y="69" text-anchor="middle" font-size="9" fill="#9ca3af">tasks</text>
+            </svg>
+            <div class="space-y-2.5 flex-1 min-w-0">
+              <div v-for="seg in donutSegments" :key="seg.label" class="flex items-center gap-2">
+                <div class="w-2.5 h-2.5 rounded-sm flex-shrink-0" :style="{ background: seg.color }"></div>
+                <span class="text-xs text-gray-600 flex-1 truncate">{{ seg.label }}</span>
+                <span class="text-xs font-bold text-gray-800">{{ seg.count }}</span>
+                <span class="text-xs text-gray-400 w-8 text-right">{{ pct(seg.count, total) }}%</span>
+              </div>
+            </div>
           </div>
         </div>
 
-        <!-- Vertical bar: incomplete by section -->
+        <!-- ── 2. Vertical bar: incomplete by section ─────────────────── -->
         <div class="card p-5">
-          <h3 class="text-sm font-semibold text-gray-700 mb-4">Incomplete Tasks by Section</h3>
-          <div class="h-52">
-            <Bar :data="sectionBarData" :options="sectionBarOptions" />
+          <h3 class="text-sm font-semibold text-gray-700 mb-2">Incomplete Tasks by Section</h3>
+          <div class="h-48">
+            <svg width="100%" height="100%" :viewBox="`0 0 ${BC_VW} ${BC_VH}`" preserveAspectRatio="xMidYMid meet">
+              <!-- Grid lines -->
+              <template v-for="tick in sectionYTicks" :key="tick.val">
+                <line :x1="BC_PL" :y1="tick.y" :x2="BC_VW - BC_PR" :y2="tick.y" stroke="#f3f4f6" stroke-width="1" />
+                <text :x="BC_PL - 4" :y="tick.y + 3" text-anchor="end" font-size="8" fill="#9ca3af">{{ tick.val }}</text>
+              </template>
+              <!-- Bars -->
+              <template v-for="bar in sectionBars" :key="bar.name">
+                <rect v-if="bar.h > 0" :x="bar.x" :y="bar.y" :width="bar.w" :height="bar.h" rx="2" fill="#818cf8" />
+                <text v-if="bar.count > 0" :x="bar.x + bar.w / 2" :y="bar.y - 3"
+                  text-anchor="middle" font-size="8" font-weight="600" fill="#6366f1">{{ bar.count }}</text>
+                <text :x="bar.x + bar.w / 2" :y="BC_VH - 3"
+                  text-anchor="middle" font-size="8" fill="#6b7280">
+                  {{ bar.name.length > 9 ? bar.name.slice(0, 8) + '…' : bar.name }}
+                </text>
+              </template>
+              <!-- Zero state -->
+              <text v-if="sectionBars.length === 0" :x="BC_VW / 2" :y="BC_VH / 2"
+                text-anchor="middle" font-size="10" fill="#d1d5db">No data</text>
+            </svg>
           </div>
         </div>
 
-        <!-- Lollipop: upcoming by assignee (custom SVG) -->
+        <!-- ── 3. Lollipop: upcoming by assignee ──────────────────────── -->
         <div class="card p-5">
           <h3 class="text-sm font-semibold text-gray-700 mb-0.5">Upcoming Tasks by Assignee</h3>
           <p class="text-xs text-gray-400 mb-4">Future due dates, not yet done</p>
           <div v-if="upcomingByAssignee.length === 0"
             class="flex items-center justify-center h-44 text-xs text-gray-400 italic">
-            No upcoming tasks with due dates assigned
+            No upcoming tasks with due dates
           </div>
-          <div v-else class="space-y-3.5 py-1 px-1 overflow-hidden">
-            <div
-              v-for="entry in upcomingByAssignee.slice(0, 8)"
-              :key="entry.name"
-              class="flex items-center gap-3"
-            >
-              <span class="text-xs text-gray-500 w-24 truncate text-right flex-shrink-0">{{ entry.name }}</span>
+          <div v-else class="space-y-3.5 py-1">
+            <div v-for="e in upcomingByAssignee.slice(0, 8)" :key="e.name" class="flex items-center gap-3">
+              <span class="text-xs text-gray-500 w-24 truncate text-right flex-shrink-0">{{ e.name }}</span>
               <div class="flex-1 flex items-center min-w-0">
-                <div
-                  class="h-0.5 rounded-full bg-indigo-300 flex-shrink-0 transition-all duration-500"
-                  :style="{ width: lollipopWidth(entry.count) + '%' }"
-                ></div>
+                <div class="h-0.5 rounded-full bg-indigo-300 flex-shrink-0 transition-all duration-500"
+                  :style="{ width: lollipopWidth(e.count) + '%' }"></div>
                 <div class="w-3 h-3 rounded-full bg-indigo-500 border-2 border-white shadow flex-shrink-0 -ml-1"></div>
               </div>
-              <span class="text-xs font-bold text-indigo-700 w-5 text-right flex-shrink-0">{{ entry.count }}</span>
+              <span class="text-xs font-bold text-indigo-700 w-5 text-right flex-shrink-0">{{ e.count }}</span>
             </div>
           </div>
         </div>
 
-        <!-- Stacked area: task activity over time -->
+        <!-- ── 4. Area: task completion over time ─────────────────────── -->
         <div class="card p-5">
-          <h3 class="text-sm font-semibold text-gray-700 mb-4">Task Completion Over Time (8 weeks)</h3>
-          <div class="h-52">
-            <Line :data="areaData" :options="areaOptions" />
+          <h3 class="text-sm font-semibold text-gray-700 mb-2">Task Completion Over Time</h3>
+          <div class="flex items-center gap-4 mb-2">
+            <div class="flex items-center gap-1.5">
+              <div class="w-6 h-0.5 bg-indigo-400 rounded"></div>
+              <span class="text-xs text-gray-500">Created</span>
+            </div>
+            <div class="flex items-center gap-1.5">
+              <div class="w-6 h-0.5 bg-emerald-400 rounded"></div>
+              <span class="text-xs text-gray-500">Completed</span>
+            </div>
+          </div>
+          <div class="h-44">
+            <svg width="100%" height="100%" :viewBox="`0 0 ${AC_VW} ${AC_VH}`" preserveAspectRatio="xMidYMid meet">
+              <!-- Grid lines -->
+              <template v-for="tick in areaYTicks" :key="tick.val">
+                <line :x1="AC_PL" :y1="tick.y" :x2="AC_VW - AC_PR" :y2="tick.y" stroke="#f1f5f9" stroke-width="1" />
+                <text :x="AC_PL - 4" :y="tick.y + 3" text-anchor="end" font-size="7" fill="#9ca3af">{{ tick.val }}</text>
+              </template>
+              <!-- Filled areas -->
+              <path v-if="createdAreaPath" :d="createdAreaPath" fill="rgba(129,140,248,0.15)" />
+              <path v-if="completedAreaPath" :d="completedAreaPath" fill="rgba(52,211,153,0.22)" />
+              <!-- Lines -->
+              <path v-if="createdLinePath" :d="createdLinePath" fill="none" stroke="#818cf8" stroke-width="1.5" stroke-linejoin="round" />
+              <path v-if="completedLinePath" :d="completedLinePath" fill="none" stroke="#34d399" stroke-width="1.5" stroke-linejoin="round" />
+              <!-- X-axis labels -->
+              <text
+                v-for="(w, i) in areaWeeks"
+                :key="i"
+                :x="AC_PL + i * (AC_CW / (areaWeeks.length - 1))"
+                :y="AC_VH - 3"
+                text-anchor="middle"
+                font-size="7"
+                fill="#9ca3af"
+              >{{ i % 2 === 0 ? w : '' }}</text>
+            </svg>
           </div>
         </div>
 
-        <!-- Horizontal bar: priority distribution -->
+        <!-- ── 5. Horizontal bar: by priority ─────────────────────────── -->
         <div class="card p-5">
-          <h3 class="text-sm font-semibold text-gray-700 mb-4">Tasks by Priority</h3>
-          <div class="h-52">
-            <Bar :data="priorityData" :options="priorityOptions" />
+          <h3 class="text-sm font-semibold text-gray-700 mb-5">Tasks by Priority</h3>
+          <div class="space-y-4">
+            <div v-for="p in priorityBars" :key="p.label" class="flex items-center gap-3">
+              <span class="text-xs font-medium text-gray-500 w-14 flex-shrink-0">{{ p.label }}</span>
+              <div class="flex-1 bg-gray-100 rounded-full h-3.5 overflow-hidden">
+                <div class="h-full rounded-full transition-all duration-500"
+                  :style="{ width: pct(p.count, maxPriorityCount) + '%', background: p.color }"></div>
+              </div>
+              <span class="text-xs font-bold text-gray-700 w-5 text-right flex-shrink-0">{{ p.count }}</span>
+            </div>
           </div>
         </div>
 
-        <!-- Stacked bar: workload by assignee -->
+        <!-- ── 6. Stacked bar: workload by assignee ────────────────────── -->
         <div class="card p-5">
-          <h3 class="text-sm font-semibold text-gray-700 mb-4">Workload by Assignee</h3>
+          <h3 class="text-sm font-semibold text-gray-700 mb-2">Workload by Assignee</h3>
+          <div class="flex items-center gap-4 mb-3">
+            <div class="flex items-center gap-1.5">
+              <div class="w-3 h-3 rounded-sm bg-emerald-400"></div>
+              <span class="text-xs text-gray-500">Done</span>
+            </div>
+            <div class="flex items-center gap-1.5">
+              <div class="w-3 h-3 rounded-sm bg-indigo-400"></div>
+              <span class="text-xs text-gray-500">Active</span>
+            </div>
+          </div>
           <div v-if="workloadByAssignee.length === 0"
-            class="flex items-center justify-center h-52 text-xs text-gray-400 italic">
+            class="flex items-center justify-center h-36 text-xs text-gray-400 italic">
             No tasks assigned to members yet
           </div>
-          <div v-else class="h-52">
-            <Bar :data="workloadData" :options="workloadOptions" />
+          <div v-else class="space-y-2.5">
+            <div v-for="e in workloadByAssignee.slice(0, 8)" :key="e.name" class="flex items-center gap-2">
+              <span class="text-xs text-gray-500 w-20 truncate flex-shrink-0">{{ e.name }}</span>
+              <div class="flex-1 flex rounded overflow-hidden h-5 bg-gray-100 min-w-0">
+                <div v-if="e.done > 0"
+                  class="bg-emerald-400 flex items-center justify-center min-w-0 transition-all"
+                  :style="{ width: pct(e.done, e.done + e.active) + '%' }">
+                  <span class="text-xs text-white font-medium leading-none truncate px-1">{{ e.done }}</span>
+                </div>
+                <div v-if="e.active > 0"
+                  class="bg-indigo-400 flex items-center justify-center min-w-0 transition-all"
+                  :style="{ width: pct(e.active, e.done + e.active) + '%' }">
+                  <span class="text-xs text-white font-medium leading-none truncate px-1">{{ e.active }}</span>
+                </div>
+              </div>
+              <span class="text-xs font-bold text-gray-600 w-5 text-right flex-shrink-0">{{ e.done + e.active }}</span>
+            </div>
           </div>
         </div>
 
@@ -114,50 +205,44 @@
 
 <script setup lang="ts">
 import { computed, onMounted } from 'vue'
-import { Doughnut, Bar, Line } from 'vue-chartjs'
-import {
-  Chart as ChartJS,
-  Title,
-  Tooltip,
-  Legend,
-  ArcElement,
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  PointElement,
-  LineElement,
-  Filler
-} from 'chart.js'
 import { useMembersStore } from '@/stores/members'
 import type { Task, Section } from '@/types'
 
-ChartJS.register(Title, Tooltip, Legend, ArcElement, CategoryScale, LinearScale, BarElement, PointElement, LineElement, Filler)
-
-const props = defineProps<{
-  tasks: Task[]
-  sections: Section[]
-}>()
+const props = defineProps<{ tasks: Task[]; sections: Section[] }>()
 
 const membersStore = useMembersStore()
+onMounted(() => { if (membersStore.members.length === 0) membersStore.fetchMembers() })
 
-onMounted(() => {
-  if (membersStore.members.length === 0) membersStore.fetchMembers()
-})
+// ── SVG layout constants ───────────────────────────────────────────────────────
+
+// Bar chart  (viewBox 300 × 150)
+const BC_VW = 300, BC_VH = 150
+const BC_PL = 28, BC_PR = 6, BC_PT = 10, BC_PB = 22
+const BC_CW = BC_VW - BC_PL - BC_PR   // 266
+const BC_CH = BC_VH - BC_PT - BC_PB   // 118
+
+// Area chart (viewBox 320 × 140)
+const AC_VW = 320, AC_VH = 140
+const AC_PL = 24, AC_PR = 6, AC_PT = 8, AC_PB = 20
+const AC_CW = AC_VW - AC_PL - AC_PR   // 290
+const AC_CH = AC_VH - AC_PT - AC_PB   // 112
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
 function toDate(d: any): Date {
   return 'toDate' in d ? d.toDate() : new Date(d)
 }
 
-const todayBase = (() => {
-  const d = new Date()
-  d.setHours(0, 0, 0, 0)
-  return d
-})()
+function pct(v: number, max: number): number {
+  return max === 0 ? 0 : Math.round((v / max) * 100)
+}
 
-// ── KPIs ─────────────────────────────────────────────────────────────────────
+const todayBase = (() => { const d = new Date(); d.setHours(0, 0, 0, 0); return d })()
 
-const total = computed(() => props.tasks.length)
-const completed = computed(() => props.tasks.filter(t => t.status === 'done').length)
+// ── KPIs ──────────────────────────────────────────────────────────────────────
+
+const total      = computed(() => props.tasks.length)
+const completed  = computed(() => props.tasks.filter(t => t.status === 'done').length)
 const incomplete = computed(() => props.tasks.filter(t => t.status !== 'done').length)
 const completionRate = computed(() =>
   total.value === 0 ? 0 : Math.round((completed.value / total.value) * 100)
@@ -165,86 +250,89 @@ const completionRate = computed(() =>
 const overdue = computed(() =>
   props.tasks.filter(t => {
     if (t.status === 'done' || !t.dueDate) return false
-    const d = toDate(t.dueDate)
-    d.setHours(0, 0, 0, 0)
+    const d = toDate(t.dueDate); d.setHours(0, 0, 0, 0)
     return d < todayBase
   }).length
 )
 
 // ── Donut: by status ──────────────────────────────────────────────────────────
 
-const donutData = computed(() => ({
-  labels: ['To Do', 'In Progress', 'Review', 'Done'],
-  datasets: [{
-    data: [
-      props.tasks.filter(t => t.status === 'todo').length,
-      props.tasks.filter(t => t.status === 'in_progress').length,
-      props.tasks.filter(t => t.status === 'review').length,
-      completed.value
-    ],
-    backgroundColor: ['#94a3b8', '#60a5fa', '#fbbf24', '#34d399'],
-    borderWidth: 2,
-    borderColor: '#ffffff',
-    hoverOffset: 6
-  }]
-}))
-
-const donutOptions = {
-  responsive: true,
-  maintainAspectRatio: false,
-  plugins: {
-    legend: {
-      display: true,
-      position: 'right' as const,
-      labels: { boxWidth: 12, padding: 14, font: { size: 11 } }
-    },
-    tooltip: {
-      callbacks: {
-        label: (ctx: any) => `  ${ctx.label}: ${ctx.raw}`
-      }
-    }
-  }
+function polarXY(cx: number, cy: number, r: number, deg: number) {
+  const rad = ((deg - 90) * Math.PI) / 180
+  return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) }
 }
+
+function donutSegPath(cx: number, cy: number, ro: number, ri: number, s: number, e: number): string {
+  if (e - s >= 359.99) {
+    const t = polarXY(cx, cy, ro, s), b = polarXY(cx, cy, ro, s + 180)
+    const ti = polarXY(cx, cy, ri, s + 180), bi = polarXY(cx, cy, ri, s)
+    return `M${t.x} ${t.y} A${ro} ${ro} 0 1 1 ${b.x} ${b.y} A${ro} ${ro} 0 1 1 ${t.x} ${t.y}` +
+           ` L${ti.x} ${ti.y} A${ri} ${ri} 0 1 0 ${bi.x} ${bi.y} A${ri} ${ri} 0 1 0 ${ti.x} ${ti.y} Z`
+  }
+  const ps = polarXY(cx, cy, ro, s), pe = polarXY(cx, cy, ro, e)
+  const qi = polarXY(cx, cy, ri, e), pi = polarXY(cx, cy, ri, s)
+  const lg = e - s > 180 ? 1 : 0
+  return `M${ps.x.toFixed(2)} ${ps.y.toFixed(2)}` +
+         ` A${ro} ${ro} 0 ${lg} 1 ${pe.x.toFixed(2)} ${pe.y.toFixed(2)}` +
+         ` L${qi.x.toFixed(2)} ${qi.y.toFixed(2)}` +
+         ` A${ri} ${ri} 0 ${lg} 0 ${pi.x.toFixed(2)} ${pi.y.toFixed(2)} Z`
+}
+
+const donutSegments = computed(() => {
+  const items = [
+    { label: 'To Do',       count: props.tasks.filter(t => t.status === 'todo').length,        color: '#94a3b8' },
+    { label: 'In Progress', count: props.tasks.filter(t => t.status === 'in_progress').length, color: '#60a5fa' },
+    { label: 'Review',      count: props.tasks.filter(t => t.status === 'review').length,      color: '#fbbf24' },
+    { label: 'Done',        count: completed.value,                                            color: '#34d399' }
+  ]
+  const tot = items.reduce((s, it) => s + it.count, 0)
+  if (tot === 0) return items.map(it => ({ ...it, path: '' }))
+  const gap = 2
+  let deg = 0
+  return items.map(it => {
+    const sweep = (it.count / tot) * (360 - items.filter(x => x.count > 0).length * gap)
+    const start = deg
+    const end = it.count > 0 ? deg + sweep : deg
+    deg = it.count > 0 ? end + gap : deg
+    return { ...it, path: it.count > 0 ? donutSegPath(60, 60, 52, 33, start, end) : '' }
+  })
+})
 
 // ── Vertical bar: incomplete by section ───────────────────────────────────────
 
-const sectionBarData = computed(() => ({
-  labels: props.sections.map(s => s.name),
-  datasets: [{
-    label: 'Incomplete tasks',
-    data: props.sections.map(s =>
-      props.tasks.filter(t => t.sectionId === s.id && t.status !== 'done').length
-    ),
-    backgroundColor: '#818cf8',
-    hoverBackgroundColor: '#6366f1',
-    borderRadius: 4
-  }]
-}))
+const sectionBars = computed(() => {
+  const cols = props.sections.map(s => ({
+    name: s.name,
+    count: props.tasks.filter(t => t.sectionId === s.id && t.status !== 'done').length
+  }))
+  const maxCount = Math.max(...cols.map(c => c.count), 1)
+  const n = cols.length || 1
+  const slotW = BC_CW / n
+  const barW = Math.min(slotW * 0.55, 44)
+  return cols.map((col, i) => {
+    const h = (col.count / maxCount) * BC_CH
+    const x = BC_PL + i * slotW + (slotW - barW) / 2
+    const y = BC_PT + BC_CH - h
+    return { ...col, x, y, w: barW, h }
+  })
+})
 
-const sectionBarOptions = {
-  responsive: true,
-  maintainAspectRatio: false,
-  plugins: { legend: { display: false } },
-  scales: {
-    y: {
-      beginAtZero: true,
-      grid: { color: '#f1f5f9' },
-      ticks: { precision: 0, font: { size: 11 } }
-    },
-    x: {
-      grid: { display: false },
-      ticks: { font: { size: 11 } }
-    }
-  }
-}
+const sectionYTicks = computed(() => {
+  const maxCount = Math.max(...props.sections.map(s =>
+    props.tasks.filter(t => t.sectionId === s.id && t.status !== 'done').length
+  ), 1)
+  return [0, 0.25, 0.5, 0.75, 1].map(f => ({
+    val: Math.round(f * maxCount),
+    y: BC_PT + BC_CH - f * BC_CH
+  }))
+})
 
-// ── Lollipop: upcoming by assignee (CSS/HTML) ─────────────────────────────────
+// ── Lollipop: upcoming by assignee ────────────────────────────────────────────
 
 const upcomingByAssignee = computed(() => {
   const upcoming = props.tasks.filter(t => {
     if (t.status === 'done' || !t.dueDate) return false
-    const d = toDate(t.dueDate)
-    d.setHours(0, 0, 0, 0)
+    const d = toDate(t.dueDate); d.setHours(0, 0, 0, 0)
     return d >= todayBase
   })
   const map: Record<string, number> = {}
@@ -255,139 +343,97 @@ const upcomingByAssignee = computed(() => {
   return Object.entries(map)
     .map(([uid, count]) => {
       const member = membersStore.members.find(m => m.uid === uid)
-      const name = uid === '__unassigned' ? 'Unassigned' : (member?.displayName ?? 'Unknown')
-      return { name, count }
+      return { name: uid === '__unassigned' ? 'Unassigned' : (member?.displayName ?? 'Unknown'), count }
     })
     .sort((a, b) => b.count - a.count)
 })
 
-const maxUpcoming = computed(() =>
-  Math.max(...upcomingByAssignee.value.map(e => e.count), 1)
-)
+const maxUpcoming = computed(() => Math.max(...upcomingByAssignee.value.map(e => e.count), 1))
 
 function lollipopWidth(count: number): number {
   return Math.max(3, (count / maxUpcoming.value) * 82)
 }
 
-// ── Stacked area: task completion over time ───────────────────────────────────
+// ── Area: task activity over time ─────────────────────────────────────────────
 
-function getWeekLabel(date: Date): string {
-  const d = new Date(date)
-  d.setHours(0, 0, 0, 0)
-  d.setDate(d.getDate() - d.getDay()) // align to Sunday
+function weekLabel(date: Date): string {
+  const d = new Date(date); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - d.getDay())
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
-const areaData = computed(() => {
+const areaWeeks = computed(() => {
   const weeks: string[] = []
   for (let i = 7; i >= 0; i--) {
-    const d = new Date(todayBase)
-    d.setDate(d.getDate() - i * 7)
-    weeks.push(getWeekLabel(d))
+    const d = new Date(todayBase); d.setDate(d.getDate() - i * 7); weeks.push(weekLabel(d))
   }
-  const createdArr = new Array(8).fill(0)
-  const completedArr = new Array(8).fill(0)
-
-  for (const task of props.tasks) {
-    const ci = weeks.indexOf(getWeekLabel(toDate(task.createdAt as any)))
-    if (ci !== -1) createdArr[ci]++
-    if (task.status === 'done') {
-      const ui = weeks.indexOf(getWeekLabel(toDate(task.updatedAt as any)))
-      if (ui !== -1) completedArr[ui]++
-    }
-  }
-
-  return {
-    labels: weeks,
-    datasets: [
-      {
-        label: 'Completed',
-        data: completedArr,
-        fill: true,
-        backgroundColor: 'rgba(52,211,153,0.25)',
-        borderColor: '#34d399',
-        borderWidth: 2,
-        tension: 0.4,
-        pointRadius: 3,
-        pointHoverRadius: 5
-      },
-      {
-        label: 'Created',
-        data: createdArr,
-        fill: true,
-        backgroundColor: 'rgba(129,140,248,0.15)',
-        borderColor: '#818cf8',
-        borderWidth: 2,
-        tension: 0.4,
-        pointRadius: 3,
-        pointHoverRadius: 5
-      }
-    ]
-  }
+  return weeks
 })
 
-const areaOptions = {
-  responsive: true,
-  maintainAspectRatio: false,
-  plugins: {
-    legend: {
-      display: true,
-      position: 'top' as const,
-      labels: { boxWidth: 10, padding: 12, font: { size: 11 } }
-    }
-  },
-  scales: {
-    y: {
-      beginAtZero: true,
-      grid: { color: '#f1f5f9' },
-      ticks: { precision: 0, font: { size: 11 } }
-    },
-    x: {
-      grid: { display: false },
-      ticks: { font: { size: 10 }, maxRotation: 45 }
+const areaWeeksData = computed(() => {
+  const weeks = areaWeeks.value
+  const created = new Array(8).fill(0)
+  const comp = new Array(8).fill(0)
+  for (const task of props.tasks) {
+    const ci = weeks.indexOf(weekLabel(toDate(task.createdAt as any)))
+    if (ci !== -1) created[ci]++
+    if (task.status === 'done') {
+      const ui = weeks.indexOf(weekLabel(toDate(task.updatedAt as any)))
+      if (ui !== -1) comp[ui]++
     }
   }
-}
+  return { created, completed: comp }
+})
 
-// ── Horizontal bar: by priority ───────────────────────────────────────────────
+const areaMaxVal = computed(() =>
+  Math.max(...areaWeeksData.value.created, ...areaWeeksData.value.completed, 1)
+)
 
-const priorityData = computed(() => ({
-  labels: ['Low', 'Medium', 'High', 'Urgent'],
-  datasets: [{
-    label: 'Tasks',
-    data: (['low', 'medium', 'high', 'urgent'] as const).map(p =>
-      props.tasks.filter(t => t.priority === p).length
-    ),
-    backgroundColor: ['#94a3b8', '#60a5fa', '#f97316', '#ef4444'],
-    borderRadius: 4,
-    borderSkipped: false
-  }]
-}))
+const areaYTicks = computed(() =>
+  [0, 0.25, 0.5, 0.75, 1].map(f => ({
+    val: Math.round(f * areaMaxVal.value),
+    y: AC_PT + AC_CH - f * AC_CH
+  }))
+)
 
-const priorityOptions = {
-  responsive: true,
-  maintainAspectRatio: false,
-  indexAxis: 'y' as const,
-  plugins: {
-    legend: { display: false },
-    tooltip: {
-      callbacks: { label: (ctx: any) => `  ${ctx.raw} tasks` }
-    }
-  },
-  scales: {
-    x: {
-      beginAtZero: true,
-      grid: { color: '#f1f5f9' },
-      ticks: { precision: 0, font: { size: 11 } }
-    },
-    y: {
-      grid: { display: false },
-      ticks: { font: { size: 12 } }
-    }
+function smoothLinePath(data: number[], maxVal: number): string {
+  if (data.length < 2) return ''
+  const xStep = AC_CW / (data.length - 1)
+  const pts = data.map((v, i) => ({
+    x: AC_PL + i * xStep,
+    y: AC_PT + AC_CH * (1 - v / maxVal)
+  }))
+  const t = xStep / 3
+  let path = `M ${pts[0].x.toFixed(1)} ${pts[0].y.toFixed(1)}`
+  for (let i = 1; i < pts.length; i++) {
+    path += ` C ${(pts[i-1].x + t).toFixed(1)} ${pts[i-1].y.toFixed(1)}` +
+            ` ${(pts[i].x - t).toFixed(1)} ${pts[i].y.toFixed(1)}` +
+            ` ${pts[i].x.toFixed(1)} ${pts[i].y.toFixed(1)}`
   }
+  return path
 }
 
-// ── Stacked bar: workload by assignee ─────────────────────────────────────────
+function closedAreaPath(linePath: string, data: number[]): string {
+  if (!linePath || data.length < 2) return ''
+  return `${linePath} L ${(AC_PL + AC_CW).toFixed(1)} ${(AC_PT + AC_CH).toFixed(1)} L ${AC_PL.toFixed(1)} ${(AC_PT + AC_CH).toFixed(1)} Z`
+}
+
+const createdLinePath   = computed(() => smoothLinePath(areaWeeksData.value.created,   areaMaxVal.value))
+const completedLinePath = computed(() => smoothLinePath(areaWeeksData.value.completed, areaMaxVal.value))
+const createdAreaPath   = computed(() => closedAreaPath(createdLinePath.value,   areaWeeksData.value.created))
+const completedAreaPath = computed(() => closedAreaPath(completedLinePath.value, areaWeeksData.value.completed))
+
+// ── Priority: horizontal bars ─────────────────────────────────────────────────
+
+const priorityBars = computed(() => [
+  { label: 'Urgent', count: props.tasks.filter(t => t.priority === 'urgent').length, color: '#ef4444' },
+  { label: 'High',   count: props.tasks.filter(t => t.priority === 'high').length,   color: '#f97316' },
+  { label: 'Medium', count: props.tasks.filter(t => t.priority === 'medium').length, color: '#60a5fa' },
+  { label: 'Low',    count: props.tasks.filter(t => t.priority === 'low').length,    color: '#94a3b8' }
+])
+
+const maxPriorityCount = computed(() => Math.max(...priorityBars.value.map(p => p.count), 1))
+
+// ── Workload: stacked bars by assignee ────────────────────────────────────────
 
 const workloadByAssignee = computed(() => {
   const map: Record<string, { done: number; active: number }> = {}
@@ -400,54 +446,8 @@ const workloadByAssignee = computed(() => {
   return Object.entries(map)
     .map(([uid, counts]) => {
       const member = membersStore.members.find(m => m.uid === uid)
-      const name = uid === '__unassigned' ? 'Unassigned' : (member?.displayName ?? 'Unknown')
-      return { name, ...counts }
+      return { name: uid === '__unassigned' ? 'Unassigned' : (member?.displayName ?? 'Unknown'), ...counts }
     })
     .sort((a, b) => (b.done + b.active) - (a.done + a.active))
 })
-
-const workloadData = computed(() => ({
-  labels: workloadByAssignee.value.map(e => e.name),
-  datasets: [
-    {
-      label: 'Done',
-      data: workloadByAssignee.value.map(e => e.done),
-      backgroundColor: '#34d399',
-      stack: 'w',
-      borderRadius: 2
-    },
-    {
-      label: 'Active',
-      data: workloadByAssignee.value.map(e => e.active),
-      backgroundColor: '#818cf8',
-      stack: 'w',
-      borderRadius: 2
-    }
-  ]
-}))
-
-const workloadOptions = {
-  responsive: true,
-  maintainAspectRatio: false,
-  plugins: {
-    legend: {
-      display: true,
-      position: 'top' as const,
-      labels: { boxWidth: 10, padding: 10, font: { size: 11 } }
-    }
-  },
-  scales: {
-    y: {
-      beginAtZero: true,
-      stacked: true,
-      grid: { color: '#f1f5f9' },
-      ticks: { precision: 0, font: { size: 11 } }
-    },
-    x: {
-      stacked: true,
-      grid: { display: false },
-      ticks: { font: { size: 11 } }
-    }
-  }
-}
 </script>
