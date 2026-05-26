@@ -1,5 +1,5 @@
 <template>
-  <div class="h-full overflow-y-auto">
+  <div class="h-full overflow-auto">
     <div class="p-6 max-w-7xl">
 
       <!-- KPI Cards -->

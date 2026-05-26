@@ -88,9 +88,9 @@
     </div>
 
     <!-- Content -->
-    <div class="flex-1 overflow-hidden">
+    <div class="flex-1 overflow-hidden flex flex-col min-h-0">
       <!-- Board view -->
-      <div v-if="viewMode === 'board'" class="flex gap-4 p-6 h-full overflow-x-auto items-start">
+      <div v-if="viewMode === 'board'" class="flex gap-4 p-6 flex-1 overflow-auto items-start min-h-0">
         <div
           v-for="col in tasksStore.sectionColumns"
           :key="col.section.id"
@@ -145,7 +145,7 @@
           </div>
 
           <!-- Task cards -->
-          <div class="space-y-2 overflow-y-auto pb-4">
+          <div class="space-y-2 pb-4">
             <TransitionGroup name="task-list">
               <TaskCard
                 v-for="task in col.tasks"
@@ -199,7 +199,7 @@
       </div>
 
       <!-- List view -->
-      <div v-else-if="viewMode === 'list'" class="p-6 max-w-5xl">
+      <div v-else-if="viewMode === 'list'" class="flex-1 overflow-y-auto min-h-0 p-6 max-w-5xl">
         <div v-if="tasksStore.loading" class="card">
           <div v-for="i in 5" :key="i" class="flex items-center gap-3 px-4 py-3 border-b border-gray-100">
             <div class="w-5 h-5 rounded-full bg-gray-200 animate-pulse"></div>
@@ -255,12 +255,12 @@
       </div>
 
       <!-- Calendar view -->
-      <div v-if="viewMode === 'calendar'" class="flex-1 overflow-y-auto">
+      <div v-if="viewMode === 'calendar'" class="flex-1 overflow-y-auto min-h-0">
         <CalendarView :tasks="tasksStore.tasks" />
       </div>
 
       <!-- Dashboard view -->
-      <div v-else-if="viewMode === 'dashboard'" class="flex-1 overflow-hidden">
+      <div v-else-if="viewMode === 'dashboard'" class="flex-1 overflow-hidden min-h-0">
         <DashboardView :tasks="tasksStore.tasks" :sections="tasksStore.sections" />
       </div>
     </div>
