@@ -14,7 +14,7 @@
       <!-- Body -->
       <div class="px-6 py-5 space-y-4">
         <p class="text-sm text-gray-500">
-          Enter the email of someone who already has an account. They'll be added to your workspace immediately.
+          Enter a colleague's email. If they already have an account they'll be added immediately; otherwise an invitation email will open so they can sign up and join automatically.
         </p>
 
         <div>

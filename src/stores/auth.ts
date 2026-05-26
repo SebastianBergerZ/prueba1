@@ -11,6 +11,7 @@ import {
 } from 'firebase/auth'
 import { doc, setDoc, getDoc, serverTimestamp, collection, query, where, getDocs, addDoc } from 'firebase/firestore'
 import { auth, googleProvider, db } from '@/firebase'
+import { useInvitationsStore } from './invitations'
 import type { AppUser, Workspace } from '@/types'
 
 export const useAuthStore = defineStore('auth', () => {
@@ -31,7 +32,9 @@ export const useAuthStore = defineStore('auth', () => {
     const userRef = doc(db, 'users', firebaseUser.uid)
     const snap = await getDoc(userRef)
 
-    if (!snap.exists()) {
+    const isNewUser = !snap.exists()
+
+    if (isNewUser) {
       await setDoc(userRef, {
         uid: firebaseUser.uid,
         displayName: firebaseUser.displayName ?? firebaseUser.email?.split('@')[0] ?? 'User',
@@ -39,6 +42,13 @@ export const useAuthStore = defineStore('auth', () => {
         photoURL: firebaseUser.photoURL,
         createdAt: serverTimestamp()
       })
+
+      // Accept any pending invitations before creating the default workspace,
+      // so the user lands in the invited workspace instead of a new empty one.
+      if (firebaseUser.email) {
+        const invitationsStore = useInvitationsStore()
+        await invitationsStore.acceptPendingInvitations(firebaseUser.email, firebaseUser.uid)
+      }
     }
 
     // Ensure the user has at least one workspace

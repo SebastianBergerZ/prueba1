@@ -12,6 +12,7 @@ import {
 } from 'firebase/firestore'
 import { db } from '@/firebase'
 import { useAuthStore } from './auth'
+import { useInvitationsStore } from './invitations'
 import type { AppUser, MemberRole } from '@/types'
 
 export const useMembersStore = defineStore('members', () => {
@@ -79,7 +80,21 @@ export const useMembersStore = defineStore('members', () => {
 
     const found = await findUserByEmail(email)
     if (!found) {
-      return { success: false, message: 'No user found with that email. They must register first.' }
+      const invitationsStore = useInvitationsStore()
+      await invitationsStore.createInvitation(
+        workspace.id,
+        workspace.name,
+        email,
+        role,
+        uid!
+      )
+      const appUrl = window.location.origin
+      const subject = encodeURIComponent(`You've been invited to join ${workspace.name}`)
+      const body = encodeURIComponent(
+        `Hi,\n\nYou've been invited to join "${workspace.name}" on our project management app.\n\nSign up using this email address to automatically join the workspace:\n${appUrl}/register\n\nSee you there!`
+      )
+      window.open(`mailto:${email}?subject=${subject}&body=${body}`)
+      return { success: true, message: `Invitation sent to ${email}. They'll join automatically when they sign up.` }
     }
 
     if (workspace.members.includes(found.uid)) {

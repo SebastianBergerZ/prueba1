@@ -104,6 +104,18 @@ export interface Comment {
   updatedAt?: Timestamp | Date
 }
 
+// ─── Invitations ─────────────────────────────────────────────────────────────
+
+export interface Invitation {
+  id: string
+  workspaceId: string
+  workspaceName: string
+  invitedEmail: string
+  role: MemberRole
+  invitedBy: string
+  createdAt: Timestamp | Date
+}
+
 // ─── UI Helpers ──────────────────────────────────────────────────────────────
 
 export interface KanbanColumn {
