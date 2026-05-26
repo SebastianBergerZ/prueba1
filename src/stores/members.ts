@@ -81,19 +81,15 @@ export const useMembersStore = defineStore('members', () => {
     const found = await findUserByEmail(email)
     if (!found) {
       const invitationsStore = useInvitationsStore()
+      const inviterName = authStore.appUser?.displayName ?? authStore.appUser?.email ?? 'A teammate'
       await invitationsStore.createInvitation(
         workspace.id,
         workspace.name,
         email,
         role,
-        uid!
+        uid!,
+        inviterName
       )
-      const appUrl = window.location.origin
-      const subject = encodeURIComponent(`You've been invited to join ${workspace.name}`)
-      const body = encodeURIComponent(
-        `Hi,\n\nYou've been invited to join "${workspace.name}" on our project management app.\n\nSign up using this email address to automatically join the workspace:\n${appUrl}/register\n\nSee you there!`
-      )
-      window.open(`mailto:${email}?subject=${subject}&body=${body}`)
       return { success: true, message: `Invitation sent to ${email}. They'll join automatically when they sign up.` }
     }
 
