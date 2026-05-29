@@ -10,7 +10,7 @@
             <circle cx="19" cy="19" r="3"/>
           </svg>
         </div>
-        <h1 class="text-2xl font-bold text-gray-900">TaskFlow</h1>
+        <h1 class="text-2xl font-bold text-gray-900">Qanty</h1>
         <p class="text-sm text-gray-500 mt-1">Sign in to your workspace</p>
       </div>
 

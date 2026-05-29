@@ -20,7 +20,7 @@ export default {
           900: '#2d3185',
           950: '#1c1d52'
         },
-        taskflow: {
+        qanty: {
           red: '#f06a6a',
           orange: '#fd8c73',
           yellow: '#eed045',

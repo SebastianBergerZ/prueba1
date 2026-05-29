@@ -189,7 +189,7 @@ const pageTitle = computed(() => {
   if (route.name === 'project') {
     return projectsStore.getProjectById(route.params.id as string)?.name ?? 'Project'
   }
-  return nameMap[route.name as string] ?? 'TaskFlow'
+  return nameMap[route.name as string] ?? 'Qanty'
 })
 
 function toDate(val: any): Date {
